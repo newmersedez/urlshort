@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/newmersedez/urlshort/internal/handler/config"
 	"github.com/newmersedez/urlshort/internal/model"
@@ -20,14 +21,14 @@ type UrlShortenerService interface {
 }
 
 type handlers struct {
-	config config.Config
+    baseURL string
 	store Repository
 	urlShortener UrlShortenerService
 	logger *log.Logger
 }
 
 func Serve(cfg config.Config, store Repository, shortener UrlShortenerService, logger *log.Logger) error {
-	h := newHandlers(cfg, store, shortener, logger)
+	h := newHandlers(cfg.BaseUrl, store, shortener, logger)
 	router := newRouter(h)
 
 	srv := &http.Server{
@@ -65,7 +66,7 @@ func (h *handlers) GetUrlByShortenValue(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortenUrl := fmt.Sprintf("%s/%s", h.config.ServerAddr, url.ShortenValue)
+	shortenUrl := fmt.Sprintf("%s/%s", h.baseURL, url.ShortenValue)
 	log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenUrl)
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
@@ -76,13 +77,6 @@ func (h *handlers) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
- 	contentType := r.Header.Get("Content-Type")
-    if contentType != "text/plain" {
-		log.Println("unsupported media type")
-        http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
-        return
-    }
 
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -106,7 +100,7 @@ func (h *handlers) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	shortenUrl := fmt.Sprintf("%s/%s", h.config.ServerAddr, url.ShortenValue)
+	shortenUrl := fmt.Sprintf("%s/%s", h.baseURL, url.ShortenValue)
 	log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenUrl)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(shortenUrl))
@@ -120,9 +114,9 @@ func newRouter(h *handlers) *http.ServeMux {
 }
 
 
-func newHandlers(cfg config.Config, store Repository, urlShortener UrlShortenerService, logger *log.Logger) *handlers {
+func newHandlers(baseUrl string, store Repository, urlShortener UrlShortenerService, logger *log.Logger) *handlers {
 	return &handlers {
-		config: cfg,
+		baseURL: baseUrl,
 		store: store,
 		urlShortener: urlShortener,
 		logger: logger,
