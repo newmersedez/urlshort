@@ -5,15 +5,14 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/newmersedez/urlshort/internal/handler/config"
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
 type Repository interface {
-	GetByShortenValue(shortenValue string) (*model.ShortenUrl, error)
-	Add(shortenUrl *model.ShortenUrl) error
+	GetByShortenValue(shortenValue string) *model.ShortenUrl
+	Add(shortenUrl *model.ShortenUrl)
 }
 
 type UrlShortenerService interface {
@@ -40,76 +39,62 @@ func Serve(cfg config.Config, store Repository, shortener UrlShortenerService, l
 	return srv.ListenAndServe()
 }
 
-func (h *handlers) GetUrlByShortenValue(w http.ResponseWriter, r *http.Request) {
-	if (r.Method != http.MethodGet) {
-		log.Println("method not allowed")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func GetUrlByShortenValueHandler(baseUrl string, repo Repository) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "id not specified", http.StatusBadRequest)
+			return 
+		}
 
-	id := r.PathValue("id")
-	if id == "" {
-		log.Println("id not specified")
-		http.Error(w, "id not specified", http.StatusBadRequest)
-		return 
-	}
+		url := repo.GetByShortenValue(id)
+		if url == nil {
+			log.Println("url not found")
+			http.Error(w, "url not found", http.StatusBadRequest)
+			return
+		}
 
-	url, err := h.store.GetByShortenValue(id)
-	if err != nil {
-		log.Println("internal server error")
-		http.Error(w, "internal server error", http.StatusBadRequest);
-		return
+		shortenUrl := fmt.Sprintf("%s/%s", baseUrl, url.ShortenValue)
+		log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenUrl)
+		
+		w.Header().Set("Content-Type", "text/plain")
+		http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 	}
-	if url == nil {
-		log.Println("url not found")
-		http.Error(w, "url not found", http.StatusBadRequest)
-		return
-	}
-
-	shortenUrl := fmt.Sprintf("%s/%s", h.baseURL, url.ShortenValue)
-	log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenUrl)
-	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
-func (h *handlers) ShortenUrl(w http.ResponseWriter, r *http.Request) {
-	if (r.Method != http.MethodPost) {
-		log.Println("method not allowed")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func ShortenUrlHandler(baseUrl string, repo Repository, urlShortener UrlShortenerService) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		bytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	bytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Println("internal server error")
-		http.Error(w, "internal server error", http.StatusBadRequest)
-		return
-	}
+		originalUrl := string(bytes)
+		shortenValue, err := urlShortener.Shorten(originalUrl)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	originalUrl := string(bytes)
-	shortenValue, err := h.urlShortener.Shorten(originalUrl)
-	if err != nil || shortenValue == nil {
-		log.Println("failed to shortn url")
-		http.Error(w, "failed to shortn url", http.StatusBadRequest)
-		return
-	}
+		url := model.NewShortenUrl(*shortenValue, originalUrl)
+		repo.Add(url)
+		
+		shortenUrl := fmt.Sprintf("%s/%s", baseUrl, url.ShortenValue)
+		log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenUrl)
 
-	url := model.NewShortenUrl(*shortenValue, originalUrl)
-	if err := h.store.Add(url); err != nil {
-		log.Println("failed to shortn url")
-		http.Error(w, "failed to shortn url", http.StatusBadRequest)
-		return
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(shortenUrl))
 	}
-	
-	shortenUrl := fmt.Sprintf("%s/%s", h.baseURL, url.ShortenValue)
-	log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenUrl)
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(shortenUrl))
 }
 
 func newRouter(h *handlers) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /", h.ShortenUrl)
-	mux.HandleFunc("GET /{id}", h.GetUrlByShortenValue)
+	mux.HandleFunc("POST /", ShortenUrlHandler(h.baseURL, h.store, h.urlShortener))
+	mux.HandleFunc("GET /{id}/", GetUrlByShortenValueHandler(h.baseURL, h.store))
 	return mux
 }
 

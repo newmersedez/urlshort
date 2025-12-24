@@ -18,22 +18,21 @@ func NewRepository() *Repository {
 }
 
 // TODO: когда появится реальная БД, будет возможность вернуть error, сейчас никогда не вернется, сделал на будущее
-func (r *Repository) GetByShortenValue(shortenValue string) (*model.ShortenUrl, error) {
+func (r *Repository) GetByShortenValue(shortenValue string) *model.ShortenUrl {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	
 	shortenUrl, exists := r.data[shortenValue]
 	if !exists {
-		return nil, nil
+		return nil
 	}
 
-	return &shortenUrl, nil
+	return &shortenUrl
 }
 
-func (r *Repository) Add(shortenUrl *model.ShortenUrl) error {
+func (r *Repository) Add(shortenUrl *model.ShortenUrl) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	r.data[shortenUrl.ShortenValue] = *shortenUrl
-	return nil
 }
