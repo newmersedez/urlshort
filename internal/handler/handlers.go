@@ -65,6 +65,8 @@ func (h *handlers) GetUrlByShortenValue(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	shortenUrl := fmt.Sprintf("%s/%s", h.config.ServerAddr, url.ShortenValue)
+	log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenUrl)
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
@@ -113,7 +115,7 @@ func (h *handlers) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 func newRouter(h *handlers) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /", h.ShortenUrl)
-	mux.HandleFunc("GET /{id}/", h.GetUrlByShortenValue)
+	mux.HandleFunc("GET /{id}", h.GetUrlByShortenValue)
 	return mux
 }
 
