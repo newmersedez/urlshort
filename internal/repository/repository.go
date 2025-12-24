@@ -11,6 +11,12 @@ type Repository struct {
 	mutex sync.Mutex
 }
 
+func NewRepository() *Repository {
+	return &Repository{
+		data: make(map[string]model.ShortenUrl),
+	}
+}
+
 // TODO: когда появится реальная БД, будет возможность вернуть error, сейчас никогда не вернется, сделал на будущее
 func (r *Repository) GetByShortenValue(shortenValue string) (*model.ShortenUrl, error) {
 	r.mutex.Lock()
