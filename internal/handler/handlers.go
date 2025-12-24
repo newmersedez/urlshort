@@ -14,7 +14,7 @@ type Repository interface {
 }
 
 type UrlShortenerService interface {
-	Shorten(url string) (string, error)
+	Shorten(url string) (*string, error)
 }
 
 type Handlers struct {
@@ -82,13 +82,18 @@ func (h *Handlers) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 
 	originalUrl := string(bytes)
 	shortenValue, err := h.urlShortener.Shorten(originalUrl)
-	if err != nil {
+	if err != nil || shortenValue == nil {
 		log.Println("failed to shortn url")
 		http.Error(w, "failed to shortn url", http.StatusBadRequest)
 		return
 	}
 
-	shortenUrl := model.NewShortenUrl(shortenValue, originalUrl)
-	h.store.Add(shortenUrl)
+	shortenUrl := model.NewShortenUrl(*shortenValue, originalUrl)
+	if err := h.store.Add(shortenUrl); err != nil {
+		log.Println("failed to shortn url")
+		http.Error(w, "failed to shortn url", http.StatusBadRequest)
+		return
+	}
+	
 	w.WriteHeader(http.StatusCreated)
 }
