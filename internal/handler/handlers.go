@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/newmersedez/urlshort/internal/handler/config"
 	"github.com/newmersedez/urlshort/internal/model"
@@ -41,7 +42,7 @@ func Serve(cfg config.Config, store Repository, shortener UrlShortenerService, l
 
 func GetUrlByShortenValueHandler(baseUrl string, repo Repository) http.HandlerFunc {
 	return func (w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
+		id := chi.URLParam(r, "id")
 		if id == "" {
 			http.Error(w, "id not specified", http.StatusBadRequest)
 			return 
@@ -91,13 +92,13 @@ func ShortenUrlHandler(baseUrl string, repo Repository, urlShortener UrlShortene
 	}
 }
 
-func newRouter(h *handlers) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /", ShortenUrlHandler(h.baseURL, h.store, h.urlShortener))
-	mux.HandleFunc("GET /{id}/", GetUrlByShortenValueHandler(h.baseURL, h.store))
-	return mux
-}
+func newRouter(h *handlers) *chi.Mux {
+	router := chi.NewRouter();
+	router.Post("/", ShortenUrlHandler(h.baseURL, h.store, h.urlShortener))
+	router.Get("/{id}", GetUrlByShortenValueHandler(h.baseURL, h.store))
 
+	return router
+}
 
 func newHandlers(baseUrl string, store Repository, urlShortener UrlShortenerService, logger *log.Logger) *handlers {
 	return &handlers {

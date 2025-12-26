@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/model"
 	"github.com/newmersedez/urlshort/internal/service"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +69,11 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 	handler := GetUrlByShortenValueHandler(baseUrl, repo);
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
-	request.SetPathValue("id", "12345678")
+	rctx := chi.NewRouteContext()
+    rctx.URLParams.Add("id", "12345678")
+    
+    // Добавляем контекст в запрос
+    request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 	
 	// Act
