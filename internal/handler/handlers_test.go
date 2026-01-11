@@ -16,10 +16,10 @@ import (
 
 func TestCanShortenValidUrl(t *testing.T) {
 	// Arrange
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
-	urlShortener := service.NewUrlShortenerService()
-	handler := ShortenURLHandler(baseUrl, repo, urlShortener)
+	urlShortener := service.NewURLShortenerService()
+	handler := ShortenURLHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://stackoverflow.com"))
 	w := httptest.NewRecorder()
@@ -39,10 +39,10 @@ func TestCanShortenValidUrl(t *testing.T) {
 
 func TestCannotShortenInvalidUrl(t *testing.T) {
 	// Arrange
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
-	urlShortener := service.NewUrlShortenerService()
-	handler := ShortenURLHandler(baseUrl, repo, urlShortener)
+	urlShortener := service.NewURLShortenerService()
+	handler := ShortenURLHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("url//string"))
 	w := httptest.NewRecorder()

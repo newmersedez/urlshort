@@ -6,10 +6,10 @@ import (
 	urltools "net/url"
 )
 
-type UrlShortenerService struct {}
+type UrlShortenerService struct{}
 
-func NewUrlShortenerService() *UrlShortenerService {
-	return new(UrlShortenerService);
+func NewURLShortenerService() *UrlShortenerService {
+	return new(UrlShortenerService)
 }
 
 func (s *UrlShortenerService) Shorten(url string) (*string, error) {
@@ -19,7 +19,6 @@ func (s *UrlShortenerService) Shorten(url string) (*string, error) {
 	}
 
 	hash := md5.Sum([]byte(url))
-    encoded := hex.EncodeToString(hash[:])[:8]
-    return &encoded, nil
+	encoded := hex.EncodeToString(hash[:])[:8]
+	return &encoded, nil
 }
-

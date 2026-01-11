@@ -19,7 +19,7 @@ func run() error {
 	cfg := config.GetConfig()
 
 	store := repository.NewRepository()
-	shortener := service.NewUrlShortenerService()
+	shortener := service.NewURLShortenerService()
 	logger := log.Default()
 
 	return handler.Serve(cfg.Handlers, store, shortener, logger)
