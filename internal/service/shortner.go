@@ -6,13 +6,13 @@ import (
 	urltools "net/url"
 )
 
-type UrlShortenerService struct{}
+type URLShortenerService struct{}
 
-func NewURLShortenerService() *UrlShortenerService {
-	return new(UrlShortenerService)
+func NewURLShortenerService() *URLShortenerService {
+	return new(URLShortenerService)
 }
 
-func (s *UrlShortenerService) Shorten(url string) (*string, error) {
+func (s *URLShortenerService) Shorten(url string) (*string, error) {
 	_, err := urltools.ParseRequestURI(url)
 	if err != nil {
 		return nil, err

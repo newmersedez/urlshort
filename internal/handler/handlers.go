@@ -14,7 +14,7 @@ import (
 
 type Repository interface {
 	GetByShortenValue(shortenValue string) *model.ShortenURL
-	Add(shortenUrl *model.ShortenURL)
+	Add(shortenURL *model.ShortenURL)
 }
 
 type URLShortenerService interface {

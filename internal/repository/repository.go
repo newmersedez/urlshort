@@ -22,12 +22,12 @@ func (r *Repository) GetByShortenValue(shortenValue string) *model.ShortenURL {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	shortenUrl, exists := r.data[shortenValue]
+	shortenURL, exists := r.data[shortenValue]
 	if !exists {
 		return nil
 	}
 
-	return &shortenUrl
+	return &shortenURL
 }
 
 func (r *Repository) Add(shortenURL *model.ShortenURL) {

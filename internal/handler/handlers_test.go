@@ -52,21 +52,22 @@ func TestCannotShortenInvalidUrl(t *testing.T) {
 
 	//Assert
 	res := w.Result()
+	defer res.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 func TestCanGetFullUrlByShortenValue(t *testing.T) {
 	// Arrange
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	shortenUrl := model.ShortenURL{
+	shortenURL := model.ShortenURL{
 		ShortenValue:  "12345678",
 		OriginalValue: "https://stackoverflow.com",
 	}
-	repo.Add(&shortenUrl)
+	repo.Add(&shortenURL)
 
-	handler := GetURLByShortenValueHandler(baseUrl, repo)
+	handler := GetURLByShortenValueHandler(baseURL, repo)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	rctx := chi.NewRouteContext()
@@ -81,6 +82,7 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 
 	//Assert
 	res := w.Result()
+	defer res.Body.Close()
 
 	assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
 	assert.NotEmpty(t, string(res.Header.Get("Location")))
@@ -88,10 +90,10 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 
 func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	// Arrange
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	handler := GetURLByShortenValueHandler(baseUrl, repo)
+	handler := GetURLByShortenValueHandler(baseURL, repo)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	w := httptest.NewRecorder()
@@ -101,15 +103,17 @@ func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 
 	//Assert
 	res := w.Result()
+	defer res.Body.Close()
+
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 	// Arrange
-	baseUrl := "http://localhost:8080"
+	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	handler := GetURLByShortenValueHandler(baseUrl, repo)
+	handler := GetURLByShortenValueHandler(baseURL, repo)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	request.SetPathValue("id", "1337")
@@ -120,6 +124,8 @@ func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 
 	//Assert
 	res := w.Result()
+	defer res.Body.Close()
+
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
@@ -134,14 +140,14 @@ func NewMockRepository() Repository {
 }
 
 func (r *MockRepository) GetByShortenValue(shortenValue string) *model.ShortenURL {
-	shortenUrl, exists := r.data[shortenValue]
+	shortenURL, exists := r.data[shortenValue]
 	if !exists {
 		return nil
 	}
 
-	return &shortenUrl
+	return &shortenURL
 }
 
-func (r *MockRepository) Add(shortenUrl *model.ShortenURL) {
-	r.data[shortenUrl.ShortenValue] = *shortenUrl
+func (r *MockRepository) Add(shortenURL *model.ShortenURL) {
+	r.data[shortenURL.ShortenValue] = *shortenURL
 }
