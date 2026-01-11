@@ -7,21 +7,21 @@ import (
 )
 
 type Repository struct {
-	data map[string]model.ShortenUrl
+	data  map[string]model.ShortenURL
 	mutex sync.Mutex
 }
 
 func NewRepository() *Repository {
 	return &Repository{
-		data: make(map[string]model.ShortenUrl),
+		data: make(map[string]model.ShortenURL),
 	}
 }
 
 // TODO: когда появится реальная БД, будет возможность вернуть error, сейчас никогда не вернется, сделал на будущее
-func (r *Repository) GetByShortenValue(shortenValue string) *model.ShortenUrl {
+func (r *Repository) GetByShortenValue(shortenValue string) *model.ShortenURL {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	shortenUrl, exists := r.data[shortenValue]
 	if !exists {
 		return nil
@@ -30,9 +30,9 @@ func (r *Repository) GetByShortenValue(shortenValue string) *model.ShortenUrl {
 	return &shortenUrl
 }
 
-func (r *Repository) Add(shortenUrl *model.ShortenUrl) {
+func (r *Repository) Add(shortenURL *model.ShortenURL) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	r.data[shortenUrl.ShortenValue] = *shortenUrl
+	r.data[shortenURL.ShortenValue] = *shortenURL
 }

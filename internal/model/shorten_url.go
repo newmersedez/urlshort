@@ -1,13 +1,13 @@
 package model
 
-type ShortenUrl struct {
-	ShortenValue	string
-	OriginalValue 	string
+type ShortenURL struct {
+	ShortenValue  string
+	OriginalValue string
 }
 
-func NewShortenUrl(shortenValue string, originalValue string) *ShortenUrl{
-	return &ShortenUrl{
-		ShortenValue: shortenValue,
+func NewShortenURL(shortenValue string, originalValue string) *ShortenURL {
+	return &ShortenURL{
+		ShortenValue:  shortenValue,
 		OriginalValue: originalValue,
 	}
 }

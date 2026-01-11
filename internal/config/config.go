@@ -13,9 +13,9 @@ type Config struct {
 func GetConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.Handlers.ServerAddr, "a", "localhost:8080", "address of HTTP server")
-	flag.StringVar(&cfg.Handlers.BaseUrl, "b", "http://localhost:8080", "DNS")
+	flag.StringVar(&cfg.Handlers.BaseURL, "b", "http://localhost:8080", "DNS")
 
 	flag.Parse()
-	
+
 	return cfg
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/newmersedez/urlshort/internal/handler/config"
@@ -12,23 +13,23 @@ import (
 )
 
 type Repository interface {
-	GetByShortenValue(shortenValue string) *model.ShortenUrl
-	Add(shortenUrl *model.ShortenUrl)
+	GetByShortenValue(shortenValue string) *model.ShortenURL
+	Add(shortenUrl *model.ShortenURL)
 }
 
-type UrlShortenerService interface {
+type URLShortenerService interface {
 	Shorten(url string) (*string, error)
 }
 
 type handlers struct {
-    baseURL string
-	store Repository
-	urlShortener UrlShortenerService
-	logger *log.Logger
+	baseURL      string
+	store        Repository
+	urlShortener URLShortenerService
+	logger       *log.Logger
 }
 
-func Serve(cfg config.Config, store Repository, shortener UrlShortenerService, logger *log.Logger) error {
-	h := newHandlers(cfg.BaseUrl, store, shortener, logger)
+func Serve(cfg config.Config, store Repository, shortener URLShortenerService, logger *log.Logger) error {
+	h := newHandlers(cfg.BaseURL, store, shortener, logger)
 	router := newRouter(h)
 
 	srv := &http.Server{
@@ -40,12 +41,12 @@ func Serve(cfg config.Config, store Repository, shortener UrlShortenerService, l
 	return srv.ListenAndServe()
 }
 
-func GetUrlByShortenValueHandler(baseUrl string, repo Repository) http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+func GetURLByShortenValueHandler(baseURL string, repo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if id == "" {
 			http.Error(w, "id not specified", http.StatusBadRequest)
-			return 
+			return
 		}
 
 		url := repo.GetByShortenValue(id)
@@ -55,16 +56,16 @@ func GetUrlByShortenValueHandler(baseUrl string, repo Repository) http.HandlerFu
 			return
 		}
 
-		shortenUrl := fmt.Sprintf("%s/%s", baseUrl, url.ShortenValue)
-		log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenUrl)
-		
+		shortenURL := fmt.Sprintf("%s/%s", baseURL, url.ShortenValue)
+		log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenURL)
+
 		w.Header().Set("Content-Type", "text/plain")
 		http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 	}
 }
 
-func ShortenUrlHandler(baseUrl string, repo Repository, urlShortener UrlShortenerService) http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+func ShortenURLHandler(baseURL string, repo Repository, urlShortener URLShortenerService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err.Error())
@@ -72,39 +73,39 @@ func ShortenUrlHandler(baseUrl string, repo Repository, urlShortener UrlShortene
 			return
 		}
 
-		originalUrl := string(bytes)
-		shortenValue, err := urlShortener.Shorten(originalUrl)
+		originalURL := string(bytes)
+		shortenValue, err := urlShortener.Shorten(originalURL)
 		if err != nil {
 			log.Println(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		url := model.NewShortenUrl(*shortenValue, originalUrl)
+		url := model.NewShortenURL(*shortenValue, originalURL)
 		repo.Add(url)
-		
-		shortenUrl := fmt.Sprintf("%s/%s", baseUrl, url.ShortenValue)
-		log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenUrl)
+
+		shortenURL := fmt.Sprintf("%s/%s", baseURL, url.ShortenValue)
+		log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenURL)
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(shortenUrl))
+		w.Write([]byte(shortenURL))
 	}
 }
 
 func newRouter(h *handlers) *chi.Mux {
-	router := chi.NewRouter();
-	router.Post("/", ShortenUrlHandler(h.baseURL, h.store, h.urlShortener))
-	router.Get("/{id}", GetUrlByShortenValueHandler(h.baseURL, h.store))
+	router := chi.NewRouter()
+	router.Post("/", ShortenURLHandler(h.baseURL, h.store, h.urlShortener))
+	router.Get("/{id}", GetURLByShortenValueHandler(h.baseURL, h.store))
 
 	return router
 }
 
-func newHandlers(baseUrl string, store Repository, urlShortener UrlShortenerService, logger *log.Logger) *handlers {
-	return &handlers {
-		baseURL: baseUrl,
-		store: store,
+func newHandlers(baseURL string, store Repository, urlShortener URLShortenerService, logger *log.Logger) *handlers {
+	return &handlers{
+		baseURL:      baseURL,
+		store:        store,
 		urlShortener: urlShortener,
-		logger: logger,
+		logger:       logger,
 	}
 }
