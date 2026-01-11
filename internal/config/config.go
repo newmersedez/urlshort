@@ -16,5 +16,6 @@ func GetConfig() Config {
 	flag.StringVar(&cfg.Handlers.BaseUrl, "b", "http://localhost:8080", "DNS")
 
 	flag.Parse()
+	
 	return cfg
 }
