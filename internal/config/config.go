@@ -15,8 +15,8 @@ const (
 	errServerAddressInvalid	= "server address is not a valid IPv4 address"
 	errBaseURLNotSet      	= "base URL is not set"
 	errBaseURLInvalid		= "base URL is not a valid URL"
-	errBaseURLInvalidSchema	= "base URL must have http:// or https:// schema"
-	errBaseURLInvalidHost	= "base URL must have valid host"
+	errBaseURLMissingSchema	= "base URL must have http:// or https:// schema"
+	errBaseURLMissingHost	= "base URL must have valid host"
 )
 
 type Config struct {
@@ -56,24 +56,28 @@ func validateServerAddress(serverAddress string) error {
 	if serverAddress == "" {
 		return errors.New(errServerAddressNotSet)
 	}
-	if _, _, err := net.SplitHostPort(serverAddress); err != nil {
+	if host, port, err := net.SplitHostPort(serverAddress); host == "" || port == "" || err != nil {
 		return errors.New(errServerAddressInvalid)
 	}
 	return nil
 }
 
 func validateBaseURL(baseURL string) error {
+	if baseURL == "" {
+		return errors.New(errBaseURLNotSet)
+	}
+	
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return errors.New(errBaseURLInvalid)
 	}
 
 	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
-		return errors.New(errBaseURLInvalidSchema)
+		return errors.New(errBaseURLMissingSchema)
 	}
 
 	if u.Host == "" {
-		return errors.New(errBaseURLInvalidHost)
+		return errors.New(errBaseURLMissingHost)
 	}
 
 	return nil
