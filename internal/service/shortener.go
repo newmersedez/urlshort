@@ -7,13 +7,13 @@ import (
 	urltools "net/url"
 )
 
-type URLShortenerService struct{}
+type Shortener struct{}
 
-func NewURLShortenerService() *URLShortenerService {
-	return &URLShortenerService{}
+func NewURLShortenerService() *Shortener {
+	return &Shortener{}
 }
 
-func (s *URLShortenerService) Shorten(url string) (string, error) {
+func (s *Shortener) Shorten(url string) (string, error) {
 	if _, err := urltools.ParseRequestURI(url); err != nil {
 		return "", fmt.Errorf("invalid URL: %w", err)
 	}

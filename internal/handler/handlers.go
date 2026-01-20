@@ -19,15 +19,15 @@ type URLShortenerService interface {
 	Shorten(url string) (string, error)
 }
 
-type Handler struct {
+type Handlers struct {
 	baseURL      string
 	store        Repository
 	urlShortener URLShortenerService
 	logger       *log.Logger
 }
 
-func NewHandler(baseURL string, store Repository, shortener URLShortenerService, logger *log.Logger) *Handler {
-	return &Handler{
+func NewHandler(baseURL string, store Repository, shortener URLShortenerService, logger *log.Logger) *Handlers {
+	return &Handlers{
 		baseURL:      baseURL,
 		store:        store,
 		urlShortener: shortener,
@@ -35,7 +35,7 @@ func NewHandler(baseURL string, store Repository, shortener URLShortenerService,
 	}
 }
 
-func (h *Handler) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		h.logger.Println("id not specified")
@@ -59,7 +59,7 @@ func (h *Handler) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.Value, http.StatusTemporaryRedirect)
 }
 
-func (h *Handler) ShortenURLHandle(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ShortenURLHandle(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.logger.Printf("error reading request body: %v", err)
