@@ -22,7 +22,10 @@ func main() {
 }
 
 func run(logger *log.Logger) error {
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		return err
+	}
 
 	store := repository.NewRepository()
 	shortener := service.NewURLShortenerService()
