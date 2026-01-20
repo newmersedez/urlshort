@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"sync"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -17,7 +18,7 @@ func NewRepository() *Repository {
 	}
 }
 
-func (r *Repository) Get(key string) (*model.ShortenURL, error) {
+func (r *Repository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -29,7 +30,7 @@ func (r *Repository) Get(key string) (*model.ShortenURL, error) {
 	return &shortenURL, nil
 }
 
-func (r *Repository) Add(shortenURL *model.ShortenURL) error {
+func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

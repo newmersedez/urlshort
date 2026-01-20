@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestCanShortenValidUrl(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
 	urlShortener := service.NewURLShortenerService()
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 	h := NewHandler(baseURL, repo, urlShortener, logger)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://stackoverflow.com"))
@@ -48,7 +47,7 @@ func TestCannotShortenInvalidUrl(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
 	urlShortener := service.NewURLShortenerService()
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 	h := NewHandler(baseURL, repo, urlShortener, logger)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("url//string"))
@@ -72,10 +71,12 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 		Key:  "12345678",
 		Value: "https://stackoverflow.com",
 	}
-	err := repo.Add(&shortenURL)
+
+	ctx := t.Context()
+	err := repo.Add(ctx, &shortenURL)
 	require.NoError(t, err)
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
 	h := NewHandler(baseURL, repo, urlShortener, logger)
 
@@ -103,7 +104,7 @@ func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
 	h := NewHandler(baseURL, repo, urlShortener, logger)
 
@@ -125,7 +126,7 @@ func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
 	h := NewHandler(baseURL, repo, urlShortener, logger)
 
@@ -156,7 +157,7 @@ func NewMockRepository() Repository {
 	}
 }
 
-func (r *MockRepository) Get(shortenValue string) (*model.ShortenURL, error) {
+func (r *MockRepository) Get(ctx context.Context, shortenValue string) (*model.ShortenURL, error) {
 	shortenURL, exists := r.data[shortenValue]
 	if !exists {
 		return nil, nil
@@ -165,7 +166,7 @@ func (r *MockRepository) Get(shortenValue string) (*model.ShortenURL, error) {
 	return &shortenURL, nil
 }
 
-func (r *MockRepository) Add(shortenURL *model.ShortenURL) error {
+func (r *MockRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.data[shortenURL.Key] = *shortenURL
 	return nil
 }

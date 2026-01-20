@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,27 +12,27 @@ import (
 )
 
 type Repository interface {
-	Get(key string) (*model.ShortenURL, error)
-	Add(shortenURL *model.ShortenURL) error
+	Get(ctx context.Context, key string) (*model.ShortenURL, error)
+	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 }
 
-type URLShortenerService interface {
+type Shortener interface {
 	Shorten(url string) (string, error)
 }
 
 type Handlers struct {
-	baseURL      string
-	store        Repository
-	urlShortener URLShortenerService
-	logger       *log.Logger
+	baseURL		string
+	store		Repository
+	shortener	Shortener
+	logger		*log.Logger
 }
 
-func NewHandler(baseURL string, store Repository, shortener URLShortenerService, logger *log.Logger) *Handlers {
+func NewHandler(baseURL string, store Repository, shortener Shortener, logger *log.Logger) *Handlers {
 	return &Handlers{
-		baseURL:      baseURL,
-		store:        store,
-		urlShortener: shortener,
-		logger:       logger,
+		baseURL: baseURL,
+		store: store,
+		shortener: shortener,
+		logger: logger,
 	}
 }
 
@@ -43,7 +44,9 @@ func (h *Handlers) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := h.store.Get(id)
+	ctx := r.Context()
+	url, err := h.store.Get(ctx, id)
+	
 	if err != nil {
 		h.logger.Printf("error retrieving URL: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -75,15 +78,18 @@ func (h *Handlers) ShortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortenValue, err := h.urlShortener.Shorten(originalURL)
+	shortenValue, err := h.shortener.Shorten(originalURL)
 	if err != nil {
 		h.logger.Printf("error shortening URL: %v", err)
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
 
+	ctx := r.Context()
 	url := model.NewShortenURL(shortenValue, originalURL)
-	if err := h.store.Add(url); err != nil {
+	
+	err = h.store.Add(ctx, url)
+	if err != nil {
 		h.logger.Printf("error storing URL: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
