@@ -31,7 +31,7 @@ func run(logger *log.Logger) error {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Post("/", handler.ShortenURLHandle)
-    router.Get("/{id}", handler.GetOriginUrlHandle)
+	router.Get("/{id}", handler.GetOriginURLHandle)
 
 	server := &http.Server{
 		Addr:         cfg.ServerAddr,

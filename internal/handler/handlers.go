@@ -21,22 +21,22 @@ type Shortener interface {
 }
 
 type Handlers struct {
-	baseURL		string
-	store		Repository
-	shortener	Shortener
-	logger		*log.Logger
+	baseURL   string
+	store     Repository
+	shortener Shortener
+	logger    *log.Logger
 }
 
 func NewHandler(baseURL string, store Repository, shortener Shortener, logger *log.Logger) *Handlers {
 	return &Handlers{
-		baseURL: baseURL,
-		store: store,
+		baseURL:   baseURL,
+		store:     store,
 		shortener: shortener,
-		logger: logger,
+		logger:    logger,
 	}
 }
 
-func (h *Handlers) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		h.logger.Println("id not specified")
@@ -46,7 +46,7 @@ func (h *Handlers) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	url, err := h.store.Get(ctx, id)
-	
+
 	if err != nil {
 		h.logger.Printf("error retrieving URL: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -87,7 +87,7 @@ func (h *Handlers) ShortenURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	url := model.NewShortenURL(shortenValue, originalURL)
-	
+
 	err = h.store.Add(ctx, url)
 	if err != nil {
 		h.logger.Printf("error storing URL: %v", err)

@@ -68,7 +68,7 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 
 	repo := NewMockRepository()
 	shortenURL := model.ShortenURL{
-		Key:  "12345678",
+		Key:   "12345678",
 		Value: "https://stackoverflow.com",
 	}
 
@@ -89,7 +89,7 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.GetOriginUrlHandle(w, request)
+	h.GetOriginURLHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -112,7 +112,7 @@ func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.GetOriginUrlHandle(w, request)
+	h.GetOriginURLHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -138,7 +138,7 @@ func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.GetOriginUrlHandle(w, request)
+	h.GetOriginURLHandle(w, request)
 
 	//Assert
 	res := w.Result()
