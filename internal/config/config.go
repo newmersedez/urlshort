@@ -1,20 +1,17 @@
 package config
 
-import (
-	"flag"
-
-	handlersConfig "github.com/newmersedez/urlshort/internal/handler/config"
-)
+import "flag"
 
 type Config struct {
-	Handlers handlersConfig.Config
+	ServerAddr string
+	BaseURL    string
 }
 
-func GetConfig() Config {
-	cfg := Config{}
-	flag.StringVar(&cfg.Handlers.ServerAddr, "a", "localhost:8080", "address of HTTP server")
-	flag.StringVar(&cfg.Handlers.BaseURL, "b", "http://localhost:8080", "DNS")
-
+func NewConfig() *Config {
+	cfg := &Config{}
+	
+	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "address of HTTP server")
+	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "base URL for shortened links")
 	flag.Parse()
 
 	return cfg

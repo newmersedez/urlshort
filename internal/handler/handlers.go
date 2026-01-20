@@ -7,105 +7,92 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-
-	"github.com/newmersedez/urlshort/internal/handler/config"
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
 type Repository interface {
-	GetByShortenValue(shortenValue string) *model.ShortenURL
-	Add(shortenURL *model.ShortenURL)
+	Get(key string) (*model.ShortenURL, error)
+	Add(shortenURL *model.ShortenURL) error
 }
 
 type URLShortenerService interface {
-	Shorten(url string) (*string, error)
+	Shorten(url string) (string, error)
 }
 
-type handlers struct {
+type Handler struct {
 	baseURL      string
 	store        Repository
 	urlShortener URLShortenerService
 	logger       *log.Logger
 }
 
-func Serve(cfg config.Config, store Repository, shortener URLShortenerService, logger *log.Logger) error {
-	h := newHandlers(cfg.BaseURL, store, shortener, logger)
-	router := newRouter(h)
-
-	srv := &http.Server{
-		Addr:    cfg.ServerAddr,
-		Handler: router,
-	}
-
-	log.Printf("Started server on address %s", cfg.ServerAddr)
-	return srv.ListenAndServe()
-}
-
-func GetURLByShortenValueHandler(baseURL string, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			http.Error(w, "id not specified", http.StatusBadRequest)
-			return
-		}
-
-		url := repo.GetByShortenValue(id)
-		if url == nil {
-			log.Println("url not found")
-			http.Error(w, "url not found", http.StatusBadRequest)
-			return
-		}
-
-		shortenURL := fmt.Sprintf("%s/%s", baseURL, url.ShortenValue)
-		log.Printf("Returning original %s by shorten %s", url.OriginalValue, shortenURL)
-
-		w.Header().Set("Content-Type", "text/plain")
-		http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
-	}
-}
-
-func ShortenURLHandler(baseURL string, repo Repository, urlShortener URLShortenerService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		originalURL := string(bytes)
-		shortenValue, err := urlShortener.Shorten(originalURL)
-		if err != nil {
-			log.Println(err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		url := model.NewShortenURL(*shortenValue, originalURL)
-		repo.Add(url)
-
-		shortenURL := fmt.Sprintf("%s/%s", baseURL, url.ShortenValue)
-		log.Printf("Successfully shorten %s to %s", url.OriginalValue, shortenURL)
-
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(shortenURL))
-	}
-}
-
-func newRouter(h *handlers) *chi.Mux {
-	router := chi.NewRouter()
-	router.Post("/", ShortenURLHandler(h.baseURL, h.store, h.urlShortener))
-	router.Get("/{id}", GetURLByShortenValueHandler(h.baseURL, h.store))
-
-	return router
-}
-
-func newHandlers(baseURL string, store Repository, urlShortener URLShortenerService, logger *log.Logger) *handlers {
-	return &handlers{
+func NewHandler(baseURL string, store Repository, shortener URLShortenerService, logger *log.Logger) *Handler {
+	return &Handler{
 		baseURL:      baseURL,
 		store:        store,
-		urlShortener: urlShortener,
+		urlShortener: shortener,
 		logger:       logger,
 	}
+}
+
+func (h *Handler) GetOriginUrlHandle(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		h.logger.Println("id not specified")
+		http.Error(w, "id not specified", http.StatusBadRequest)
+		return
+	}
+
+	url, err := h.store.Get(id)
+	if err != nil {
+		h.logger.Printf("error retrieving URL: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if url == nil {
+		h.logger.Printf("URL not found for id: %s", id)
+		http.Error(w, "URL not found", http.StatusNotFound)
+		return
+	}
+
+	h.logger.Printf("Redirecting %s to %s", id, url.Value)
+	http.Redirect(w, r, url.Value, http.StatusTemporaryRedirect)
+}
+
+func (h *Handler) ShortenURLHandle(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.logger.Printf("error reading request body: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	originalURL := string(body)
+	if originalURL == "" {
+		h.logger.Println("empty URL provided")
+		http.Error(w, "URL cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	shortenValue, err := h.urlShortener.Shorten(originalURL)
+	if err != nil {
+		h.logger.Printf("error shortening URL: %v", err)
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	url := model.NewShortenURL(shortenValue, originalURL)
+	if err := h.store.Add(url); err != nil {
+		h.logger.Printf("error storing URL: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, url.Key)
+	h.logger.Printf("Successfully shortened %s to %s", url.Value, shortenURL)
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(shortenURL))
 }

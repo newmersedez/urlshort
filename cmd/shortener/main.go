@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
 	"github.com/newmersedez/urlshort/internal/repository"
@@ -10,18 +13,32 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
+	logger := log.Default()
+
+	if err := run(logger); err != nil {
+		logger.Fatal(err)
 	}
 }
 
-func run() error {
-	cfg := config.GetConfig()
+func run(logger *log.Logger) error {
+	cfg := config.NewConfig()
 
 	store := repository.NewRepository()
 	shortener := service.NewURLShortenerService()
-	logger := log.Default()
+	handler := handler.NewHandler(cfg.BaseURL, store, shortener, logger)
 
-	return handler.Serve(cfg.Handlers, store, shortener, logger)
+	router := chi.NewRouter()
+	router.Post("/", handler.ShortenURLHandle)
+    router.Get("/{id}", handler.GetOriginUrlHandle)
 
+	server := &http.Server{
+		Addr:         cfg.ServerAddr,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	logger.Printf("Starting server on %s", cfg.ServerAddr)
+	return server.ListenAndServe()
 }
