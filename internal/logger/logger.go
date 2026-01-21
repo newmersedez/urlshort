@@ -21,9 +21,10 @@ func Initialize(logLevel string) error {
 	cfg.Encoding = "console"
 	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.EncoderConfig.ConsoleSeparator = " "
 	cfg.DisableCaller = true
+
 	lg, err := cfg.Build()
-	
 	if err != nil {
 		return err
 	}
