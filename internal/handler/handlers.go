@@ -57,7 +57,6 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Log.Info("Redirect", zap.String("from", id), zap.String("to", url.Value))
 	http.Redirect(w, r, url.Value, http.StatusTemporaryRedirect)
 }
 

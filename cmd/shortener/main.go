@@ -5,13 +5,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
 	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
+	"github.com/newmersedez/urlshort/internal/middleware"
+
 	"go.uber.org/zap"
 )
 
@@ -36,7 +37,7 @@ func run() error {
 	handler := handler.NewHandler(cfg.BaseURL, store, shortener)
 
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	router.Use(middleware.RequestLogger)
 	router.Post("/", handler.ShortenURLHandle)
 	router.Get("/{id}", handler.GetOriginURLHandle)
 
