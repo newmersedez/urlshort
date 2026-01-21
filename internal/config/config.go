@@ -13,15 +13,19 @@ import (
 const (
 	errServerAddressNotSet	= "server address is not set"
 	errServerAddressInvalid	= "server address is not a valid IPv4 address"
+
 	errBaseURLNotSet      	= "base URL is not set"
 	errBaseURLInvalid		= "base URL is not a valid URL"
 	errBaseURLMissingSchema	= "base URL must have http:// or https:// schema"
 	errBaseURLMissingHost	= "base URL must have valid host"
+
+	errLogLevelNotSet		= "log level is not set"
 )
 
 type Config struct {
-	ServerAddr string	`env:"SERVER_ADDRESS"`
-	BaseURL    string	`env:"BASE_URL"`
+	ServerAddr	string	`env:"SERVER_ADDRESS"`
+	BaseURL		string	`env:"BASE_URL"`
+	LogLevel	string	`env:"LOG_LEVEL"`
 }
 
 func NewConfig() (*Config, error) {
@@ -38,13 +42,16 @@ func NewConfig() (*Config, error) {
 	if err := validateBaseURL(cfg.BaseURL); err != nil {
 		return nil, err
 	}
-	
+	if err := validateLogLevel(cfg.LogLevel); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "IPv4 address of HTTP server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	flag.StringVar(&cfg.LogLevel, "l", "info", "Log level")
 	flag.Parse()
 }
 
@@ -78,6 +85,14 @@ func validateBaseURL(baseURL string) error {
 
 	if u.Host == "" {
 		return errors.New(errBaseURLMissingHost)
+	}
+
+	return nil
+}
+
+func validateLogLevel(logLevel string) error {
+	if logLevel == "" {
+		return errors.New(errLogLevelNotSet)
 	}
 
 	return nil

@@ -5,34 +5,36 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
+	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
+	"go.uber.org/zap"
 )
 
 func main() {
-	logger := log.Default()
-
-	if err := run(logger); err != nil {
-		logger.Fatal(err)
+	if err := run(); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func run(logger *log.Logger) error {
+func run() error {
 	cfg, err := config.NewConfig()
 	if err != nil {
 		return err
 	}
 
+	if err := logger.Initialize(cfg.LogLevel); err != nil {
+		log.Fatal(err)
+	} 
+
 	store := repository.NewRepository()
 	shortener := service.NewURLShortenerService()
-	handler := handler.NewHandler(cfg.BaseURL, store, shortener, logger)
+	handler := handler.NewHandler(cfg.BaseURL, store, shortener)
 
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
 	router.Post("/", handler.ShortenURLHandle)
 	router.Get("/{id}", handler.GetOriginURLHandle)
 
@@ -44,6 +46,6 @@ func run(logger *log.Logger) error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	logger.Printf("Starting server on %s", cfg.ServerAddr)
+	logger.Log.Info("Starting server", zap.String("address", cfg.ServerAddr))
 	return server.ListenAndServe()
 }

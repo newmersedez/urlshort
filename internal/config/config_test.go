@@ -14,51 +14,56 @@ func TestNewConfig(t *testing.T) {
 		name			string
 		serverAddress	string
 		baseURL			string
-		ok				bool
+		logLevel		string
 		err				error
 	} {
 		{
 			name: 			"Valid",
 			serverAddress: "localhost:9999",
 			baseURL: 		"http://localhost:9999",
+			logLevel: 		"info",
 			err: 			nil,
 		},
 		{
 			name: 			"Empty server address",
 			serverAddress:	"", 
 			baseURL: 		"http://localhost:9999",
+			logLevel: 		"info",
 			err: 			errors.New(errServerAddressNotSet),
 		},
 		{
 			name: 			"Empty base url",
 			serverAddress: 	"localhost:9999", 
 			baseURL: 		"",
+			logLevel: 		"info",
 			err: 			errors.New(errBaseURLNotSet),
 		},
 		{
 			name: 			"Invalid server address format",
 			serverAddress: 	":9999",
 			baseURL: 		"http://localhost:9999",
+			logLevel: 		"info",
 			err: 			errors.New(errServerAddressInvalid),
 		},
 		{
 			name: 			"Invalid base url format",
 			serverAddress: 	"localhost:9999", 
 			baseURL: 		"1http://234",
+			logLevel: 		"info",
 			err: 			errors.New(errBaseURLInvalid),
 		},
 		{
 			name: 			"Missing base url schema",
 			serverAddress: 	"localhost:9999", 
 			baseURL: 		"localhost:9999",
-			ok:				false,
+			logLevel: 		"info",
 			err: 			errors.New(errBaseURLMissingSchema),
 		},
 		{
-			name: 			"Missing base url host",
+			name: 			"Empty log level",
 			serverAddress: 	"localhost:9999", 
 			baseURL: 		"http://",
-			ok:				false,
+			logLevel: 		"",
 			err: 			errors.New(errBaseURLMissingHost),
 		},
 	}
@@ -66,7 +71,7 @@ func TestNewConfig(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-			os.Args = []string{"test", "-a", test.serverAddress, "-b", test.baseURL}
+			os.Args = []string{"test", "-a", test.serverAddress, "-b", test.baseURL, "-l", test.logLevel}
 			flag.CommandLine.Parse(os.Args[1:])
 
 			_, err := NewConfig()
@@ -192,6 +197,66 @@ func TestBaseURLPriority(t *testing.T) {
 			cfg, err := NewConfig()
 			require.NoError(t, err)
 			require.Equal(t, test.want, cfg.BaseURL)
+		})
+	}
+}
+
+func TestLogLevelPriority(t *testing.T) {
+	tests := []struct {
+		name		string
+		envName		string
+		envValue 	string
+		flagName	string
+		flagValue	string
+		want     	string
+	}{
+		{
+			name:		"Environment value has priority if set",
+			envName:	"LOG_LEVEL",
+			envValue:	"warn",
+			flagName:	"-l",
+			flagValue:	"debug",
+			want:    	"warn",
+		},
+		{
+			name:		"Flag value has priority if environment value is not set",
+			envName:	"",
+			envValue:	"",
+			flagName:	"-l",
+			flagValue:	"warn",
+			want:    	"warn",
+		},
+		{
+			name:		"Default value if flag and value are not set",
+			envName:	"",
+			envValue:	"",
+			flagName:	"",
+			flagValue:	"",
+			want:    	"info",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
+
+			if test.envValue != "" {
+				t.Setenv(test.envName, test.envValue)
+			} else {
+				os.Unsetenv(test.envName)
+			}
+
+			if test.flagName != "" {
+				os.Args = []string{"test", test.flagName, test.flagValue}
+				flag.CommandLine.Parse(os.Args[1:])
+			} else {
+				os.Args = []string{"test"}
+				flag.CommandLine.Parse(os.Args[1:])
+			}
+
+			cfg, err := NewConfig()
+			require.NoError(t, err)
+			require.Equal(t, test.want, cfg.LogLevel)
 		})
 	}
 }
