@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
@@ -35,6 +36,7 @@ func run() error {
 	handler := handler.NewHandler(cfg.BaseURL, store, shortener)
 
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
 	router.Post("/", handler.ShortenURLHandle)
 	router.Get("/{id}", handler.GetOriginURLHandle)
 

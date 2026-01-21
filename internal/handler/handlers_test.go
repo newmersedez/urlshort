@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,8 +20,7 @@ func TestCanShortenValidUrl(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
 	urlShortener := service.NewURLShortenerService()
-	logger := log.Default()
-	h := NewHandler(baseURL, repo, urlShortener, logger)
+	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://stackoverflow.com"))
 	w := httptest.NewRecorder()
@@ -47,8 +45,7 @@ func TestCannotShortenInvalidUrl(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
 	urlShortener := service.NewURLShortenerService()
-	logger := log.Default()
-	h := NewHandler(baseURL, repo, urlShortener, logger)
+	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("url//string"))
 	w := httptest.NewRecorder()
@@ -76,9 +73,8 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 	err := repo.Add(ctx, &shortenURL)
 	require.NoError(t, err)
 
-	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
-	h := NewHandler(baseURL, repo, urlShortener, logger)
+	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	rctx := chi.NewRouteContext()
@@ -104,9 +100,8 @@ func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
-	h := NewHandler(baseURL, repo, urlShortener, logger)
+	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	w := httptest.NewRecorder()
@@ -126,9 +121,8 @@ func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 	baseURL := "http://localhost:8080"
 
 	repo := NewMockRepository()
-	logger := log.Default()
 	urlShortener := service.NewURLShortenerService()
-	h := NewHandler(baseURL, repo, urlShortener, logger)
+	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "/1337", nil)
 	rctx := chi.NewRouteContext()
