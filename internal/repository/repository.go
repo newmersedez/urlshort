@@ -8,13 +8,14 @@ import (
 )
 
 type Repository struct {
-	data map[string]model.ShortenURL
-	mu   sync.RWMutex
+	data	map[string]model.ShortenURL
+	mu		sync.RWMutex
 }
 
 func NewRepository() *Repository {
 	return &Repository{
 		data: make(map[string]model.ShortenURL),
+		mu: sync.RWMutex{},
 	}
 }
 
