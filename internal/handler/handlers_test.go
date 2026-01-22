@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,7 +27,7 @@ func TestCanShortenValidUrl(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.ShortenURLHandle(w, request)
+	h.ShortenURLViaPlainTextHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -51,7 +52,7 @@ func TestCannotShortenInvalidUrl(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.ShortenURLHandle(w, request)
+	h.ShortenURLViaPlainTextHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -139,6 +140,97 @@ func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
 	defer res.Body.Close()
 
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+}
+
+func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
+	// Arrange
+	baseURL := "http://localhost:8080"
+	repo := NewMockRepository()
+	urlShortener := service.NewURLShortenerService()
+	h := NewHandler(baseURL, repo, urlShortener)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url": "https://practicum.yandex.ru"}`))
+	r.Header.Add("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	h.ShortenURLViaJSONHandle(w, r)
+
+	//Assert
+	res := w.Result()
+	defer res.Body.Close()
+
+	require.Equal(t, "application/json", res.Header.Get("Content-Type"))
+	require.Equal(t, http.StatusCreated, res.StatusCode)
+
+	resBody, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	var response ShortenUrlResponse
+	err = json.Unmarshal(resBody, &response)
+	require.NoError(t, err)
+	require.NotEmpty(t, response.Result)
+	require.Contains(t, res.Header.Get("Content-Type"), "application/json")
+}
+
+func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
+	// Arrange
+	baseURL := "http://localhost:8080"
+	repo := NewMockRepository()
+	urlShortener := service.NewURLShortenerService()
+	h := NewHandler(baseURL, repo, urlShortener)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url": "url//string"`))
+	r.Header.Add("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	h.ShortenURLViaPlainTextHandle(w, r)
+
+	//Assert
+	res := w.Result()
+	defer res.Body.Close()
+	require.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
+	// Arrange
+	baseURL := "http://localhost:8080"
+	repo := NewMockRepository()
+	urlShortener := service.NewURLShortenerService()
+	h := NewHandler(baseURL, repo, urlShortener)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url": "url//string"`))
+	r.Header.Add("Content-Type", "text/xml")
+	w := httptest.NewRecorder()
+
+	// Act
+	h.ShortenURLViaPlainTextHandle(w, r)
+
+	//Assert
+	res := w.Result()
+	defer res.Body.Close()
+	require.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
+	// Arrange
+	baseURL := "http://localhost:8080"
+	repo := NewMockRepository()
+	urlShortener := service.NewURLShortenerService()
+	h := NewHandler(baseURL, repo, urlShortener)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url": "url//string"}`))
+	r.Header.Add("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	h.ShortenURLViaPlainTextHandle(w, r)
+
+	//Assert
+	res := w.Result()
+	defer res.Body.Close()
+	require.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
 type MockRepository struct {

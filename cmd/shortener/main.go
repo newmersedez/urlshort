@@ -9,9 +9,9 @@ import (
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
 	"github.com/newmersedez/urlshort/internal/logger"
+	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
-	"github.com/newmersedez/urlshort/internal/middleware"
 
 	"go.uber.org/zap"
 )
@@ -30,7 +30,7 @@ func run() error {
 
 	if err := logger.Initialize(cfg.LogLevel); err != nil {
 		log.Fatal(err)
-	} 
+	}
 
 	store := repository.NewRepository()
 	shortener := service.NewURLShortenerService()
@@ -38,7 +38,9 @@ func run() error {
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestLogger)
-	router.Post("/", handler.ShortenURLHandle)
+
+	router.Post("/", handler.ShortenURLViaPlainTextHandle)
+	router.Post("/api/shorten", handler.ShortenURLViaJSONHandle)
 	router.Get("/{id}", handler.GetOriginURLHandle)
 
 	server := &http.Server{
