@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCanShortenValidUrl(t *testing.T) {
+func TestCanShortenValidURL(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
@@ -41,7 +41,7 @@ func TestCanShortenValidUrl(t *testing.T) {
 	assert.Contains(t, res.Header.Get("Content-Type"), "text/plain")
 }
 
-func TestCannotShortenInvalidUrl(t *testing.T) {
+func TestCannotShortenInvalidURL(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	repo := NewMockRepository()
@@ -60,7 +60,7 @@ func TestCannotShortenInvalidUrl(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func TestCanGetFullUrlByShortenValue(t *testing.T) {
+func TestCanGetFullURLByShortenValue(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 
@@ -96,7 +96,7 @@ func TestCanGetFullUrlByShortenValue(t *testing.T) {
 	assert.NotEmpty(t, res.Header.Get("Location"))
 }
 
-func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
+func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 
@@ -117,7 +117,7 @@ func TestCannotGetFullUrlByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }
 
-func TestCannotGetFullUrlByShortenValueIfItDoesNotExist(t *testing.T) {
+func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 
@@ -166,7 +166,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	resBody, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
-	var response ShortenUrlResponse
+	var response ShortenURLResponse
 	err = json.Unmarshal(resBody, &response)
 	require.NoError(t, err)
 	require.NotEmpty(t, response.Result)

@@ -21,12 +21,12 @@ func TestAdd(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
-	shortenUrl := model.NewShortenURL(key, value)
+	shortenURL := model.NewShortenURL(key, value)
 
 	repository := NewRepository()
 
 	// Act
-	repository.Add(t.Context(), shortenUrl)
+	repository.Add(t.Context(), shortenURL)
 
 	// Assert
 	val, ok := repository.data[key]
@@ -39,15 +39,15 @@ func TestGet(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
-	shortenUrl := model.NewShortenURL(key, value)
+	shortenURL := model.NewShortenURL(key, value)
 
 	repository := NewRepository()
-	repository.Add(t.Context(), shortenUrl)
+	repository.Add(t.Context(), shortenURL)
 
 	// Act
 	val, err := repository.Get(t.Context(), key)
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, shortenUrl.Value, val.Value)
+	require.Equal(t, shortenURL.Value, val.Value)
 }

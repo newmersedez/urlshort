@@ -33,11 +33,11 @@ type Shortener interface {
 	Shorten(url string) (string, error)
 }
 
-type ShortenUrlRequest struct {
+type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
-type ShortenUrlResponse struct {
+type ShortenURLResponse struct {
 	Result string `json:"result"`
 }
 
@@ -87,7 +87,7 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var request ShortenUrlRequest
+	var request ShortenURLRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		logger.Log.Error(ErrInternalServerError, zap.Error(err))
 		http.Error(w, ErrRequestBodyInvalidJSON, http.StatusBadRequest)
@@ -120,7 +120,7 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 	w.Header().Set(contentTypeHeader, contentTypeApplicationJSON)
 	w.WriteHeader(http.StatusCreated)
 
-	response := ShortenUrlResponse{
+	response := ShortenURLResponse{
 		Result: fmt.Sprintf("%s/%s", h.baseURL, url.Key),
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
