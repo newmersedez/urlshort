@@ -38,6 +38,7 @@ func run() error {
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestLogger)
+	router.Use(middleware.GzipRequestCompressor)
 
 	router.Post("/", handler.ShortenURLViaPlainTextHandle)
 	router.Post("/api/shorten", handler.ShortenURLViaJSONHandle)
