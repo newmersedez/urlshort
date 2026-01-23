@@ -9,57 +9,57 @@ import (
 )
 
 type (
-    responseData struct {
-        status int
-        size int
-    }
+	responseData struct {
+		status int
+		size   int
+	}
 
-    loggingResponseWriter struct {
-        http.ResponseWriter
-        responseData *responseData
-    }
+	loggingResponseWriter struct {
+		http.ResponseWriter
+		responseData *responseData
+	}
 )
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-    size, err := r.ResponseWriter.Write(b) 
-    r.responseData.size += size 
-    return size, err
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-    r.ResponseWriter.WriteHeader(statusCode) 
-    r.responseData.status = statusCode
-} 
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
+}
 
-func RequestLogger(h http.Handler) http.Handler {
-    logFn := func(w http.ResponseWriter, r *http.Request) {
-        start := time.Now()
+func RequestLoggerMiddleware(h http.Handler) http.Handler {
+	logFn := func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 
-        logger.Log.Info(
+		logger.Log.Info(
 			"Request starting",
 			zap.String("method", r.Method),
 			zap.String("uri", r.RequestURI),
-        )
+		)
 
-        responseData := new(responseData)
-		
-        lw := loggingResponseWriter {
-            ResponseWriter: w,
-            responseData: responseData,
-        }
-		
-        h.ServeHTTP(&lw, r)
+		responseData := new(responseData)
 
-        duration := time.Since(start)
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   responseData,
+		}
 
-        logger.Log.Info(
+		h.ServeHTTP(&lw, r)
+
+		duration := time.Since(start)
+
+		logger.Log.Info(
 			"Request finished",
-            zap.String("method", r.Method),
+			zap.String("method", r.Method),
 			zap.String("uri", r.RequestURI),
-            zap.Int("status", responseData.status),
-            zap.Duration("duration", duration),
-            zap.Int("size", responseData.size),
-        )
-    }
-    return http.HandlerFunc(logFn)
+			zap.Int("status", responseData.status),
+			zap.Duration("duration", duration),
+			zap.Int("size", responseData.size),
+		)
+	}
+	return http.HandlerFunc(logFn)
 }

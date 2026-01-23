@@ -37,8 +37,8 @@ func run() error {
 	handler := handler.NewHandler(cfg.BaseURL, store, shortener)
 
 	router := chi.NewRouter()
-	router.Use(middleware.RequestLogger)
-	router.Use(middleware.GzipRequestCompressor)
+	router.Use(middleware.RequestLoggerMiddleware)
+	router.Use(middleware.RequestCompressorMiddleware)
 
 	router.Post("/", handler.ShortenURLViaPlainTextHandle)
 	router.Post("/api/shorten", handler.ShortenURLViaJSONHandle)
