@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"os"
 	"testing"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -9,12 +10,19 @@ import (
 
 func TestNewRepository(t *testing.T) {
 	// Arrange
+	fileStoragePath := "test.json"
 
 	// Act
-	repository := NewRepository()
+	repository, err := NewRepository(fileStoragePath)
 
 	// Assert
-	require.NotNil(t, repository.data)
+	require.NoError(t, err)
+	require.NotNil(t, repository.items)
+	require.NotNil(t, repository.encoder)
+	require.NotNil(t, repository.file)
+
+	_, err = os.Stat(fileStoragePath)
+	require.NoError(t, err)
 }
 
 func TestAdd(t *testing.T) {
@@ -23,13 +31,13 @@ func TestAdd(t *testing.T) {
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
 
-	repository := NewRepository()
+	repository, _ := NewRepository("test.json")
 
 	// Act
 	repository.Add(t.Context(), shortenURL)
 
 	// Assert
-	val, ok := repository.data[key]
+	val, ok := repository.items[key]
 	require.True(t, ok)
 	require.Equal(t, value, val.Value)
 }
@@ -41,7 +49,7 @@ func TestGet(t *testing.T) {
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
 
-	repository := NewRepository()
+	repository, _ := NewRepository("test.json")
 	repository.Add(t.Context(), shortenURL)
 
 	// Act

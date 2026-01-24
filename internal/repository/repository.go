@@ -13,7 +13,7 @@ type Repository struct {
 	mu		sync.RWMutex
 	file	*os.File
 	encoder	*json.Encoder
-	data	map[string]model.ShortenURL
+	items	map[string]model.ShortenURL
 }
 
 func NewRepository(filepath string) (*Repository, error) {
@@ -24,7 +24,7 @@ func NewRepository(filepath string) (*Repository, error) {
 	}
 
 	repo := &Repository{
-		data: make(map[string]model.ShortenURL),
+		items: make(map[string]model.ShortenURL),
 		mu: sync.RWMutex{},
 		file: file,
 		encoder: json.NewEncoder(file),
@@ -41,7 +41,7 @@ func (r *Repository) Get(ctx context.Context, key string) (*model.ShortenURL, er
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	shortenURL, exists := r.data[key]
+	shortenURL, exists := r.items[key]
 	if !exists {
 		return nil, nil
 	}
@@ -53,9 +53,9 @@ func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) erro
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.data[shortenURL.Key]; !exists {
+	if _, exists := r.items[shortenURL.Key]; !exists {
 		r.encoder.Encode(shortenURL)
-		r.data[shortenURL.Key] = *shortenURL
+		r.items[shortenURL.Key] = *shortenURL
 	}
 	return nil
 }
@@ -72,8 +72,8 @@ func (r *Repository) restoreDataFromFile() error {
 		if err := decoder.Decode(&url); err != nil {
 			return nil
 		}
-		if _, exists := r.data[url.Key]; !exists {
-			r.data[url.Key] = url
+		if _, exists := r.items[url.Key]; !exists {
+			r.items[url.Key] = url
 		}
 	}
 	

@@ -256,3 +256,5 @@ func (r *MockRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) 
 	r.data[shortenURL.Key] = *shortenURL
 	return nil
 }
+
+func (r *MockRepository) Dispose() {}
