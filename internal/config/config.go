@@ -111,16 +111,19 @@ func validateFileStoragePath(path string) error {
 		return errFileStoragePathNotSet
 	}
 
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-
-	file, err := os.Create(path);
-	if err == nil {
-		file.Close()
-		os.Remove(path)
-		return nil
-	}
-
-	return errFileStoragePathInvalid
+    clean := filepath.Clean(path)
+    
+    if clean == "." || clean == ".." || strings.HasSuffix(clean, "/") {
+        return errFileStoragePathInvalid
+    }
+    
+    // Пробуем создать (но не оставляем) файл по этому пути
+    file, err := os.CreateTemp(filepath.Dir(clean), filepath.Base(clean)+"*")
+    if err != nil {
+        return errFileStoragePathInvalid
+    }
+    file.Close()
+    os.Remove(file.Name())
+    
+    return nil
 }
