@@ -117,7 +117,6 @@ func validateFileStoragePath(path string) error {
         return errFileStoragePathInvalid
     }
     
-    // Пробуем создать (но не оставляем) файл по этому пути
     file, err := os.CreateTemp(filepath.Dir(clean), filepath.Base(clean)+"*")
     if err != nil {
         return errFileStoragePathInvalid

@@ -87,7 +87,7 @@ func TestNewConfig(t *testing.T) {
 			serverAddress: 	"localhost:9999", 
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
-			fileStoragePath: "///file.json",
+			fileStoragePath: "..",
 			err: 			errFileStoragePathInvalid,
 		},
 	}
