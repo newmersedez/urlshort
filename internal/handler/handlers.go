@@ -14,14 +14,12 @@ import (
 )
 
 const (
-	ErrUnsupportedContentType  = "unsupported content type"
-	ErrRequestBodyInvalidJSON  = "request body is not a valid JSON"
-	ErrResponseBodyInvalidJSON = "response body is not a valid JSON"
-	ErrMissingRequiredValue    = "missing required value"
-	ErrInternalServerError     = "internal server error"
+	contentTypeHeader         	= "Content-Type"
+	contentTypeApplicationJSON	= "application/json"
+	contentTypeTextPlain 		= "text/plain"
 
-	contentTypeHeader          = "Content-Type"
-	contentTypeApplicationJSON = "application/json"
+	errUnsupportedContentType	= "unsupported content type"
+	errInternalServerError		= "internal server error"
 )
 
 type Repository interface {
@@ -59,8 +57,8 @@ func NewHandler(baseURL string, store Repository, shortener Shortener) *Handlers
 func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		logger.Log.Info("id is not specified")
-		http.Error(w, "id not specified", http.StatusBadRequest)
+		logger.Log.Info("id is required")
+		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
 
@@ -69,11 +67,11 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		logger.Log.Error("error retrieving URL", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, errInternalServerError, http.StatusInternalServerError)
 		return
 	}
 	if url == nil {
-		logger.Log.Error("URL not found for id", zap.String("id", id))
+		logger.Log.Error("URL not found", zap.String("id", id))
 		http.Error(w, "URL not found", http.StatusNotFound)
 		return
 	}
@@ -83,28 +81,28 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get(contentTypeHeader); contentType != contentTypeApplicationJSON {
-		logger.Log.Error(ErrUnsupportedContentType)
-		http.Error(w, ErrUnsupportedContentType, http.StatusUnsupportedMediaType)
+		logger.Log.Error(errUnsupportedContentType)
+		http.Error(w, errUnsupportedContentType, http.StatusUnsupportedMediaType)
 		return
 	}
 
 	var request ShortenURLRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		logger.Log.Error(ErrInternalServerError, zap.Error(err))
-		http.Error(w, ErrRequestBodyInvalidJSON, http.StatusBadRequest)
+		logger.Log.Error("failed to parse request body", zap.Error(err))
+		http.Error(w, "request body is not a valid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if request.URL == "" {
-		logger.Log.Error(ErrMissingRequiredValue, zap.String("url", request.URL))
-		http.Error(w, ErrMissingRequiredValue, http.StatusBadRequest)
+		logger.Log.Error("url value is required", zap.String("url", request.URL))
+		http.Error(w, "url value is required", http.StatusBadRequest)
 		return
 	}
 
 	shortURL, err := h.shortener.Shorten(request.URL)
 	if err != nil {
-		logger.Log.Error("Invalid URL", zap.Error(err))
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		logger.Log.Error("invalid URL", zap.Error(err))
+		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
 
@@ -113,8 +111,8 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 
 	err = h.store.Add(ctx, url)
 	if err != nil {
-		logger.Log.Error(ErrInternalServerError, zap.Error(err))
-		http.Error(w, ErrInternalServerError, http.StatusInternalServerError)
+		logger.Log.Error(errInternalServerError, zap.Error(err))
+		http.Error(w, errInternalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -125,25 +123,31 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 		Result: fmt.Sprintf("%s/%s", h.baseURL, url.Key),
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Log.Error(ErrResponseBodyInvalidJSON, zap.Error(err))
-		http.Error(w, ErrResponseBodyInvalidJSON, http.StatusInternalServerError)
+		logger.Log.Error("failed to write response body", zap.Error(err))
+		http.Error(w, errInternalServerError, http.StatusInternalServerError)
 		return
 	}
 }
 
 func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
+	if contentType := r.Header.Get(contentTypeHeader); contentType != contentTypeTextPlain {
+		logger.Log.Error(errUnsupportedContentType)
+		http.Error(w, errUnsupportedContentType, http.StatusUnsupportedMediaType)
+		return
+	}
+	
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Log.Error("error reading request body", zap.Error(err))
-		http.Error(w, "bad request", http.StatusBadRequest)
+		http.Error(w, "request body is not a valid plain text", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
 	originalURL := string(body)
 	if originalURL == "" {
-		logger.Log.Error("empty URL provided")
-		http.Error(w, "URL cannot be empty", http.StatusBadRequest)
+		logger.Log.Error("URL is required")
+		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
@@ -160,11 +164,11 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	err = h.store.Add(ctx, url)
 	if err != nil {
 		logger.Log.Error("error storing URL", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, errInternalServerError, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set(contentTypeHeader, contentTypeTextPlain)
 	w.WriteHeader(http.StatusCreated)
 
 	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, url.Key)
