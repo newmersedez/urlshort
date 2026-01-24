@@ -2,6 +2,7 @@ package repository
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -10,7 +11,7 @@ import (
 
 func TestNewRepository(t *testing.T) {
 	// Arrange
-	fileStoragePath := "test.json"
+	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
 	// Act
 	repository, err := NewRepository(fileStoragePath)
@@ -30,8 +31,10 @@ func TestAdd(t *testing.T) {
 	key := "key"
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
+	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
-	repository, _ := NewRepository("test.json")
+	repository, _ := NewRepository(fileStoragePath)
+	defer os.Remove(fileStoragePath)
 
 	// Act
 	repository.Add(t.Context(), shortenURL)
@@ -48,8 +51,11 @@ func TestGet(t *testing.T) {
 	key := "key"
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
+	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
-	repository, _ := NewRepository("test.json")
+	repository, _ := NewRepository(fileStoragePath)
+	defer os.Remove(fileStoragePath)
+
 	repository.Add(t.Context(), shortenURL)
 
 	// Act
