@@ -24,6 +24,7 @@ func TestCanShortenValidURL(t *testing.T) {
 	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://stackoverflow.com"))
+	request.Header.Set("Content-Type", "text/plain")
 	w := httptest.NewRecorder()
 
 	// Act
@@ -49,6 +50,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("url//string"))
+	request.Header.Set("Content-Type", "text/plain")
 	w := httptest.NewRecorder()
 
 	// Act
@@ -78,6 +80,7 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.Header.Set("Content-Type", "text/plain")
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "12345678")
 
@@ -105,6 +108,7 @@ func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
+	request.Header.Set("Content-Type", "text/plain")
 	w := httptest.NewRecorder()
 
 	// Act
@@ -126,6 +130,7 @@ func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	h := NewHandler(baseURL, repo, urlShortener)
 
 	request := httptest.NewRequest(http.MethodGet, "/1337", nil)
+	request.Header.Set("Content-Type", "text/plain")
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "1337")
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
@@ -185,7 +190,7 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.ShortenURLViaPlainTextHandle(w, r)
+	h.ShortenURLViaJSONHandle(w, r)
 
 	//Assert
 	res := w.Result()
@@ -205,12 +210,12 @@ func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.ShortenURLViaPlainTextHandle(w, r)
+	h.ShortenURLViaJSONHandle(w, r)
 
 	//Assert
 	res := w.Result()
 	defer res.Body.Close()
-	require.Equal(t, http.StatusBadRequest, res.StatusCode)
+	require.Equal(t, http.StatusUnsupportedMediaType, res.StatusCode)
 }
 
 func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
@@ -225,7 +230,7 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.ShortenURLViaPlainTextHandle(w, r)
+	h.ShortenURLViaJSONHandle(w, r)
 
 	//Assert
 	res := w.Result()
