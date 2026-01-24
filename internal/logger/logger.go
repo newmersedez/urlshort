@@ -7,11 +7,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Log *zap.Logger = zap.NewNop();
+var Log *zap.Logger = zap.NewNop()
 
-func Initialize(logLevel string) error {
+func NewLogger(logLevel string) error {
 	level, err := zap.ParseAtomicLevel(logLevel)
-	
+
 	if err != nil {
 		return err
 	}
@@ -31,4 +31,8 @@ func Initialize(logLevel string) error {
 
 	Log = lg
 	return nil
+}
+
+func Dispose() {
+	Log.Sync()
 }

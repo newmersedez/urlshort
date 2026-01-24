@@ -27,6 +27,7 @@ const (
 type Repository interface {
 	Get(ctx context.Context, key string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	Dispose()
 }
 
 type Shortener interface {

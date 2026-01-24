@@ -28,13 +28,19 @@ func run() error {
 		return err
 	}
 
-	if err := logger.Initialize(cfg.LogLevel); err != nil {
+	if err := logger.NewLogger(cfg.LogLevel); err != nil {
 		log.Fatal(err)
 	}
+	defer logger.Dispose()
 
-	store := repository.NewRepository()
+	storage, err := repository.NewRepository(cfg.FileStoragePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer storage.Dispose()
+
 	shortener := service.NewURLShortenerService()
-	handler := handler.NewHandler(cfg.BaseURL, store, shortener)
+	handler := handler.NewHandler(cfg.BaseURL, storage, shortener)
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestLoggerMiddleware)
