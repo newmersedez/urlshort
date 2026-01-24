@@ -5,32 +5,36 @@ import (
 	"flag"
 	"net"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/caarlos0/env/v11"
 )
 
-const (
-	errServerAddressNotSet	= "server address is not set"
-	errServerAddressInvalid	= "server address is not a valid IPv4 address"
-
-	errBaseURLNotSet      	= "base URL is not set"
-	errBaseURLInvalid		= "base URL is not a valid URL"
-	errBaseURLMissingSchema	= "base URL must have http:// or https:// schema"
-	errBaseURLMissingHost	= "base URL must have valid host"
-
-	errLogLevelNotSet		= "log level is not set"
+var (
+	defaultFileStoragePath		= filepath.Join(os.TempDir(), "storage.json")
+	errServerAddressNotSet		= errors.New("server address is not set")
+	errServerAddressInvalid		= errors.New("server address is not a valid IPv4 address")
+	errBaseURLNotSet      		= errors.New("base URL is not set")
+	errBaseURLInvalid			= errors.New("base URL is not a valid URL")
+	errBaseURLMissingSchema		= errors.New("base URL must have http:// or https:// schema")
+	errBaseURLMissingHost		= errors.New("base URL must have valid host")
+	errLogLevelNotSet			= errors.New("log level is not set")
+	errFileStoragePathNotSet	= errors.New("file storage path is not set")
+	errFileStoragePathInvalid	= errors.New("file storage path is not a valid OS path")
 )
 
 type Config struct {
-	ServerAddr	string	`env:"SERVER_ADDRESS"`
-	BaseURL		string	`env:"BASE_URL"`
-	LogLevel	string	`env:"LOG_LEVEL"`
+	ServerAddr		string	`env:"SERVER_ADDRESS"`
+	BaseURL			string	`env:"BASE_URL"`
+	LogLevel		string	`env:"LOG_LEVEL"`
+	FileStoragePath	string	`env:"FILE_STORAGE_PATH"`
 }
 
 func NewConfig() (*Config, error) {
 	cfg := Config{}
-	
+
 	parseFlags(&cfg)
 	if err := parseEnvironment(&cfg); err != nil {
 		return nil, err
@@ -45,13 +49,17 @@ func NewConfig() (*Config, error) {
 	if err := validateLogLevel(cfg.LogLevel); err != nil {
 		return nil, err
 	}
+	if err := validateFileStoragePath(cfg.FileStoragePath); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "IPv4 address of HTTP server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
-	flag.StringVar(&cfg.LogLevel, "l", "info", "Log level")
+	flag.StringVar(&cfg.LogLevel, "l", "info", "Minimal log level")
+	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "File storage path")
 	flag.Parse()
 }
 
@@ -61,30 +69,30 @@ func parseEnvironment(cfg *Config) error {
 
 func validateServerAddress(serverAddress string) error {
 	if serverAddress == "" {
-		return errors.New(errServerAddressNotSet)
+		return errServerAddressNotSet
 	}
 	if host, port, err := net.SplitHostPort(serverAddress); host == "" || port == "" || err != nil {
-		return errors.New(errServerAddressInvalid)
+		return errServerAddressInvalid
 	}
 	return nil
 }
 
 func validateBaseURL(baseURL string) error {
 	if baseURL == "" {
-		return errors.New(errBaseURLNotSet)
+		return errBaseURLNotSet
 	}
 	
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return errors.New(errBaseURLInvalid)
+		return errBaseURLInvalid
 	}
 
 	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
-		return errors.New(errBaseURLMissingSchema)
+		return errBaseURLMissingSchema
 	}
 
 	if u.Host == "" {
-		return errors.New(errBaseURLMissingHost)
+		return errBaseURLMissingHost
 	}
 
 	return nil
@@ -92,8 +100,27 @@ func validateBaseURL(baseURL string) error {
 
 func validateLogLevel(logLevel string) error {
 	if logLevel == "" {
-		return errors.New(errLogLevelNotSet)
+		return errLogLevelNotSet
 	}
 
 	return nil
+}
+
+func validateFileStoragePath(path string) error {
+	if path == "" {
+		return errFileStoragePathNotSet
+	}
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	file, err := os.Create(path);
+	if err == nil {
+		file.Close()
+		os.Remove(path)
+		return nil
+	}
+
+	return errFileStoragePathInvalid
 }
