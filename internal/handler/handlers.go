@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"io"
 	"net/http"
 
@@ -140,9 +141,9 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	}
 
 	ctx := r.Context()
-	url := model.NewShortenURL(shortenValue, originalURL)
+	shortenURL := model.NewShortenURL(shortenValue, originalURL)
 
-	err = h.store.Add(ctx, url)
+	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		logger.Log.Error("error storing URL", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -152,6 +153,11 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 
-	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, url.Key)
-	w.Write([]byte(shortenURL))
+	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
+	if err != nil {
+		logger.Log.Error("failed to get full url: %w", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte(fullShortenURL))
 }
