@@ -16,7 +16,7 @@ func TestNewConfig(t *testing.T) {
 		baseURL			string
 		logLevel		string
 		fileStoragePath	string
-		err				error
+		valid			bool
 	} {
 		{
 			name: 			"Valid",
@@ -24,7 +24,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			nil,
+			valid: 			true,
 		},
 		{
 			name: 			"Empty server address",
@@ -32,7 +32,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			errServerAddressNotSet,
+			valid: 			false,
 		},
 		{
 			name: 			"Empty base url",
@@ -40,7 +40,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			errBaseURLNotSet,
+			valid: 			false,
 		},
 		{
 			name: 			"Invalid server address format",
@@ -48,7 +48,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			errServerAddressInvalid,
+			valid: 			false,
 		},
 		{
 			name: 			"Invalid base url format",
@@ -56,7 +56,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"1http://234",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			errBaseURLInvalid,
+			valid: 			false,
 		},
 		{
 			name: 			"Missing base url schema",
@@ -64,7 +64,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "file.json",
-			err: 			errBaseURLMissingSchema,
+			valid: 			false,
 		},
 		{
 			name: 			"Empty log level",
@@ -72,7 +72,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"",
 			fileStoragePath: "file.json",
-			err: 			errLogLevelNotSet,
+			valid: 			false,
 		},
 		{
 			name: 			"Empty file storage path",
@@ -80,7 +80,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "",
-			err: 			errFileStoragePathNotSet,
+			valid: 			false,
 		},
 		{
 			name: 			"Invalid file storage path format",
@@ -88,7 +88,7 @@ func TestNewConfig(t *testing.T) {
 			baseURL: 		"http://localhost:9999",
 			logLevel: 		"info",
 			fileStoragePath: "..",
-			err: 			errFileStoragePathInvalid,
+			valid: 			false,
 		},
 	}
 
@@ -100,7 +100,7 @@ func TestNewConfig(t *testing.T) {
 
 			_, err := NewConfig()
 			
-			require.Equal(t, test.err, err)
+			require.Equal(t, test.valid, err == nil)
 		})
 	}
 }

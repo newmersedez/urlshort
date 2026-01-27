@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	acceptEncodingHeader  = "Accept-Encoding"
-	contentEncodingHeader = "Content-Encoding"
-	contentEncodingGZip   = "gzip"
-)
-
 type compressWriter struct {
 	w  http.ResponseWriter
 	gz *gzip.Writer
@@ -35,7 +29,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	c.w.Header().Set(contentEncodingHeader, contentEncodingGZip)
+	c.w.Header().Set("Content-Encoding", "gzip")
 	c.w.WriteHeader(statusCode)
 }
 
@@ -76,14 +70,14 @@ func RequestCompressorMiddleware(next http.Handler) http.Handler {
 	compressionFn := func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
-		if !strings.Contains(r.Header.Get(acceptEncodingHeader), contentEncodingGZip) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			cw := newCompressWriter(w)
 
 			defer cw.Close()
 			ow = cw
 		}
 
-		if strings.Contains(r.Header.Get(contentEncodingHeader), contentEncodingGZip) {
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
 				ow.WriteHeader(http.StatusInternalServerError)

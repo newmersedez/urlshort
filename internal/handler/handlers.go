@@ -13,15 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	contentTypeHeader         	= "Content-Type"
-	contentTypeApplicationJSON	= "application/json"
-	contentTypeTextPlain 		= "text/plain"
-
-	errUnsupportedContentType	= "unsupported content type"
-	errInternalServerError		= "internal server error"
-)
-
 type Repository interface {
 	Get(ctx context.Context, key string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
@@ -67,7 +58,7 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		logger.Log.Error("error retrieving URL", zap.Error(err))
-		http.Error(w, errInternalServerError, http.StatusInternalServerError)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	if url == nil {
@@ -80,9 +71,8 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
-	if contentType := r.Header.Get(contentTypeHeader); contentType != contentTypeApplicationJSON {
-		logger.Log.Error(errUnsupportedContentType)
-		http.Error(w, errUnsupportedContentType, http.StatusUnsupportedMediaType)
+	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -111,12 +101,12 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 
 	err = h.store.Add(ctx, url)
 	if err != nil {
-		logger.Log.Error(errInternalServerError, zap.Error(err))
-		http.Error(w, errInternalServerError, http.StatusInternalServerError)
+		logger.Log.Error("internal server error", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set(contentTypeHeader, contentTypeApplicationJSON)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	response := ShortenURLResponse{
@@ -124,15 +114,14 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logger.Log.Error("failed to write response body", zap.Error(err))
-		http.Error(w, errInternalServerError, http.StatusInternalServerError)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 }
 
 func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
-	if contentType := r.Header.Get(contentTypeHeader); contentType != contentTypeTextPlain {
-		logger.Log.Error(errUnsupportedContentType)
-		http.Error(w, errUnsupportedContentType, http.StatusUnsupportedMediaType)
+	if contentType := r.Header.Get("Content-Type"); contentType != "text/plain" {
+		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
 		return
 	}
 	
@@ -164,11 +153,11 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	err = h.store.Add(ctx, url)
 	if err != nil {
 		logger.Log.Error("error storing URL", zap.Error(err))
-		http.Error(w, errInternalServerError, http.StatusInternalServerError)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set(contentTypeHeader, contentTypeTextPlain)
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 
 	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, url.Key)

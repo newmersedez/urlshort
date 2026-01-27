@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -10,19 +11,6 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v11"
-)
-
-var (
-	defaultFileStoragePath		= filepath.Join(os.TempDir(), "storage.json")
-	errServerAddressNotSet		= errors.New("server address is not set")
-	errServerAddressInvalid		= errors.New("server address is not a valid IPv4 address")
-	errBaseURLNotSet      		= errors.New("base URL is not set")
-	errBaseURLInvalid			= errors.New("base URL is not a valid URL")
-	errBaseURLMissingSchema		= errors.New("base URL must have http:// or https:// schema")
-	errBaseURLMissingHost		= errors.New("base URL must have valid host")
-	errLogLevelNotSet			= errors.New("log level is not set")
-	errFileStoragePathNotSet	= errors.New("file storage path is not set")
-	errFileStoragePathInvalid	= errors.New("file storage path is not a valid OS path")
 )
 
 type Config struct {
@@ -59,7 +47,7 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "IPv4 address of HTTP server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "Minimal log level")
-	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "File storage path")
+	flag.StringVar(&cfg.FileStoragePath, "f", filepath.Join(os.TempDir(), "storage.json"), "File storage path")
 	flag.Parse()
 }
 
@@ -69,30 +57,30 @@ func parseEnvironment(cfg *Config) error {
 
 func validateServerAddress(serverAddress string) error {
 	if serverAddress == "" {
-		return errServerAddressNotSet
+		return errors.New("server address is not set")
 	}
 	if host, port, err := net.SplitHostPort(serverAddress); host == "" || port == "" || err != nil {
-		return errServerAddressInvalid
+		return fmt.Errorf("server address %s is not a valid IPv4 address: %w", serverAddress, err)
 	}
 	return nil
 }
 
 func validateBaseURL(baseURL string) error {
 	if baseURL == "" {
-		return errBaseURLNotSet
+		return errors.New("base URL is not set")
 	}
 	
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return errBaseURLInvalid
+		return fmt.Errorf("base URL %s is not a valid URL: %w", baseURL, err)
 	}
 
 	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
-		return errBaseURLMissingSchema
+		return fmt.Errorf("base URL %s must have http:// or https:// schema", baseURL)
 	}
 
 	if u.Host == "" {
-		return errBaseURLMissingHost
+		return fmt.Errorf("base URL %s must have valid host", baseURL)
 	}
 
 	return nil
@@ -100,7 +88,7 @@ func validateBaseURL(baseURL string) error {
 
 func validateLogLevel(logLevel string) error {
 	if logLevel == "" {
-		return errLogLevelNotSet
+		return errors.New("log level is not set")
 	}
 
 	return nil
@@ -108,18 +96,18 @@ func validateLogLevel(logLevel string) error {
 
 func validateFileStoragePath(path string) error {
 	if path == "" {
-		return errFileStoragePathNotSet
+		return errors.New("file storage path is not set")
 	}
 
     clean := filepath.Clean(path)
     
     if clean == "." || clean == ".." || strings.HasSuffix(clean, "/") {
-        return errFileStoragePathInvalid
+        return fmt.Errorf("file storage path %s is not a valid OS path", path)
     }
     
     file, err := os.CreateTemp(filepath.Dir(clean), filepath.Base(clean)+"*")
     if err != nil {
-        return errFileStoragePathInvalid
+        return fmt.Errorf("file storage path %s is not a valid OS path", path)
     }
     file.Close()
     os.Remove(file.Name())
