@@ -58,7 +58,7 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		logger.Log.Error("error retrieving URL", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if url == nil {
@@ -71,7 +71,7 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
-		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
+		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -97,8 +97,8 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 
 	err = h.store.Add(ctx, url)
 	if err != nil {
-		logger.Log.Error("internal server error", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		logger.Log.Error("failed to add shorten url to the storage", zap.Error(err))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -110,14 +110,14 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logger.Log.Error("failed to write response body", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 }
 
 func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "text/plain" {
-		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
+		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
 	}
 	
@@ -136,7 +136,7 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 
 	shortenValue, err := h.shortener.Shorten(originalURL)
 	if err != nil {
-		http.Error(w, "invalid URL", http.StatusBadRequest)
+		http.Error(w, "failed to shorten URL", http.StatusBadRequest)
 		return
 	}
 
@@ -146,7 +146,7 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		logger.Log.Error("error storing URL", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
 		logger.Log.Error("failed to get full url: %w", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	w.Write([]byte(fullShortenURL))
