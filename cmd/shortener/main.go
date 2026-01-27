@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -25,17 +26,17 @@ func main() {
 func run() error {
 	cfg, err := config.NewConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create config instance: %w", err)
 	}
 
 	if err := logger.NewLogger(cfg.LogLevel); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create logger instance: %w", err)
 	}
 	defer logger.Dispose()
 
 	storage, err := repository.NewRepository(cfg.FileStoragePath)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create repository instance: %w", err)
 	}
 	defer storage.Dispose()
 

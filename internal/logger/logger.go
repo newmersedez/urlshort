@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -13,7 +14,7 @@ func NewLogger(logLevel string) error {
 	level, err := zap.ParseAtomicLevel(logLevel)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	cfg := zap.NewProductionConfig()
@@ -26,7 +27,7 @@ func NewLogger(logLevel string) error {
 
 	lg, err := cfg.Build()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build logger instance: %w", err)
 	}
 
 	Log = lg
