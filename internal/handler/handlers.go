@@ -48,7 +48,6 @@ func NewHandler(baseURL string, store Repository, shortener Shortener) *Handlers
 func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		logger.Log.Info("id is required")
 		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
@@ -62,7 +61,6 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if url == nil {
-		logger.Log.Error("URL not found", zap.String("id", id))
 		http.Error(w, "URL not found", http.StatusNotFound)
 		return
 	}
@@ -78,20 +76,17 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 
 	var request ShortenURLRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		logger.Log.Error("failed to parse request body", zap.Error(err))
 		http.Error(w, "request body is not a valid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if request.URL == "" {
-		logger.Log.Error("url value is required", zap.String("url", request.URL))
 		http.Error(w, "url value is required", http.StatusBadRequest)
 		return
 	}
 
 	shortURL, err := h.shortener.Shorten(request.URL)
 	if err != nil {
-		logger.Log.Error("invalid URL", zap.Error(err))
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
@@ -127,7 +122,6 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 	
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		logger.Log.Error("error reading request body", zap.Error(err))
 		http.Error(w, "request body is not a valid plain text", http.StatusBadRequest)
 		return
 	}
@@ -135,14 +129,12 @@ func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Re
 
 	originalURL := string(body)
 	if originalURL == "" {
-		logger.Log.Error("URL is required")
 		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
 	shortenValue, err := h.shortener.Shorten(originalURL)
 	if err != nil {
-		logger.Log.Error("error shortening URL", zap.Error(err))
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
