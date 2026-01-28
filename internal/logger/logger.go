@@ -2,55 +2,54 @@ package logger
 
 import (
 	"fmt"
-	"time"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"log/slog"
+	"os"
+	"strings"
 )
 
-type Logger struct {
-	log	*zap.SugaredLogger
+func NewLogger(logLevel string) (*slog.Logger, error) {
+    levelVar := new(slog.LevelVar)
+    
+    if err := setLogLevel(levelVar, logLevel); err != nil {
+        return nil, err
+    }
+
+    options := &slog.HandlerOptions{
+        Level: levelVar,
+    }
+
+	handler := slog.NewTextHandler(os.Stderr, options)
+	logger := slog.New(handler)
+    
+	return logger, nil
 }
 
-func NewLogger(logLevel string) (*Logger, error) {
-	level, err := zap.ParseAtomicLevel(logLevel)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse log level: %w", err)
-	}
-
-	cfg := zap.NewProductionConfig()
-	cfg.Level = level
-	cfg.Encoding = "console"
-	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
-	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	cfg.EncoderConfig.ConsoleSeparator = " "
-	cfg.DisableCaller = true
-
-	log, err := cfg.Build()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build logger instance: %w", err)
-	}
-
-	return &Logger{log: log.Sugar()}, nil
+func setLogLevel(levelVar *slog.LevelVar, levelStr string) error {
+    level, err := parseLogLevel(levelStr)
+    if err != nil {
+        return err
+    }
+    levelVar.Set(level)
+    return nil
 }
 
-func (l *Logger) Debug(msg string, args...any) {
-	l.log.Debugf(msg, args...)
-}
-
-func (l *Logger) Info(msg string, args...any) {
-	l.log.Infof(msg, args...)
-}
-
-func (l *Logger) Warn(msg string, args...any) {
-	l.log.Warnf(msg, args...)
-}
-
-func (l *Logger) Error(msg string, args...any) {
-	l.log.Errorf(msg, args...)
-}
-
-func (l *Logger) Dispose() {
-	l.log.Sync()
+func parseLogLevel(levelStr string) (slog.Level, error) {
+    levelStr = strings.TrimSpace(strings.ToUpper(levelStr))
+    
+    if levelStr == "" {
+        return slog.LevelInfo, nil
+    }
+    
+    switch levelStr {
+    case "DEBUG":
+        return slog.LevelDebug, nil
+    case "INFO":
+        return slog.LevelInfo, nil
+    case "WARN", "WARNING":
+        return slog.LevelWarn, nil
+    case "ERROR":
+        return slog.LevelError, nil
+    default:
+        return slog.LevelInfo, fmt.Errorf("unknown log level: %s", levelStr)
+    }
 }

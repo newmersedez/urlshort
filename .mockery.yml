@@ -9,4 +9,3 @@ packages:
         interfaces:
             Shortener:
             Repository:
-            Logger:

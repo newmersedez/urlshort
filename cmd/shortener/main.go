@@ -27,7 +27,6 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to create logger instance: %w", err)
 	}
-	defer logger.Dispose()
 
 	repository, err := repository.NewRepository(cfg.FileStoragePath)
 	if err != nil {
@@ -37,6 +36,6 @@ func run() error {
 
 	shortener := service.NewURLShortenerService()
 
-	logger.Info("Starting server at address: %s", cfg.ServerAddr)
+	logger.Info("Starting server", "address", cfg.ServerAddr)
 	return handler.Serve(*cfg, repository, shortener, logger)
 }

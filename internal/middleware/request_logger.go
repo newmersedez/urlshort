@@ -1,17 +1,10 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 )
-
-type Logger interface {
-	Debug(msg string, args...any)
-	Info(msg string, args...any)
-	Warn(msg string, args...any)
-	Error(msg string, args...any)
-	Dispose()
-}
 
 type (
 	responseData struct {
@@ -36,11 +29,13 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func RequestLoggerMiddleware(logger Logger) func(h http.Handler) http.Handler {
+func RequestLoggerMiddleware(logger *slog.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			logger.Info("Request starting %s %s", r.Method, r.RequestURI)
+			logger.Info("Request starting", 
+				"method", r.Method, 
+				"uri", r.RequestURI)
 
 			responseData := new(responseData)
 
@@ -52,7 +47,12 @@ func RequestLoggerMiddleware(logger Logger) func(h http.Handler) http.Handler {
 			h.ServeHTTP(&lw, r)
 
 			duration := time.Since(start)
-			logger.Info("Request finished %s %s - %d - %s - %d bytes", r.Method, r.RequestURI, responseData.status, duration, responseData.size)
+			logger.Info("Request finished", 
+				"method", r.Method, 
+				"uru", r.RequestURI, 
+				"status", responseData.status, 
+				"duration", duration, 
+				"size", responseData.size)
 		}
 		return http.HandlerFunc(logFn)
 	}

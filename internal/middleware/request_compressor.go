@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -66,7 +67,7 @@ func (c *compressReader) Close() error {
 	return c.gz.Close()
 }
 
-func RequestCompressorMiddleware(logger Logger) func(next http.Handler) http.Handler {
+func RequestCompressorMiddleware(logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		compressionFn := func(w http.ResponseWriter, r *http.Request) {
 			ow := w
@@ -81,7 +82,7 @@ func RequestCompressorMiddleware(logger Logger) func(next http.Handler) http.Han
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 				cr, err := newCompressReader(r.Body)
 				if err != nil {
-					logger.Error("failed to create gzip reader: %v", err)
+					logger.Error("failed to create gzip reader", "error", err)
 					ow.WriteHeader(http.StatusInternalServerError)
 					return
 				}

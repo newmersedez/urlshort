@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"log/slog"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
@@ -24,14 +25,6 @@ type Shortener interface {
 	Shorten(url string) (string, error)
 }
 
-type Logger interface {
-	Debug(msg string, args...any)
-	Info(msg string, args...any)
-	Warn(msg string, args...any)
-	Error(msg string, args...any)
-	Dispose()
-}
-
 type shortenURLRequest struct {
 	URL string `json:"url"`
 }
@@ -44,25 +37,25 @@ type handlers struct {
 	baseURL		string
 	store		Repository
 	shortener	Shortener
-	logger		Logger
+	logger		*slog.Logger
 }
 
-func Serve(cfg config.Config, store Repository, shortener Shortener, logger Logger) error {
+func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger) error {
 	handler := newHandlers(cfg.BaseURL, store, shortener, logger)
 	router := newRouter(handler)
 
 	server := &http.Server{
-		Addr:         cfg.ServerAddr,
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:			cfg.ServerAddr,
+		Handler:		router,
+		ReadTimeout:	10 * time.Second,
+		WriteTimeout:	10 * time.Second,
+		IdleTimeout:	60 * time.Second,
 	}
 	
 	return server.ListenAndServe()
 }
 
-func newHandlers(baseURL string, store Repository, shortener Shortener, logger Logger) *handlers {
+func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger) *handlers {
 	return &handlers{
 		baseURL:	baseURL,
 		store:		store,
@@ -95,7 +88,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	url, err := h.store.Get(ctx, id)
 
 	if err != nil {
-		h.logger.Error("error retrieving URL: %v", err)
+		h.logger.Error("error retrieving URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -135,7 +128,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("failed to add shorten url to the storage: %v", err)
+		h.logger.Error("failed to add shorten url to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -145,7 +138,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
-		h.logger.Error("failed to get full url: %v", err)
+		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -154,7 +147,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		Result: fullShortenURL,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error("failed to write response body: %v", err)
+		h.logger.Error("failed to write response body", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -190,7 +183,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("error storing URL: %v", err)
+		h.logger.Error("error storing URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -200,7 +193,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
-		h.logger.Error("failed to get full url: %v", err)
+		h.logger.Error("failed to get full url", "error",err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
