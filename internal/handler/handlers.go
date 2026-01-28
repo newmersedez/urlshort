@@ -143,14 +143,16 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 	response := shortenURLResponse{
 		Result: fullShortenURL,
 	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	err = json.NewEncoder(w).Encode(response)
+
+	if err != nil {
 		h.logger.Error("failed to write response body", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
