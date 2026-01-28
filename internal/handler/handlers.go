@@ -95,7 +95,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	url, err := h.store.Get(ctx, id)
 
 	if err != nil {
-		h.logger.Error("error retrieving URL", err)
+		h.logger.Error("error retrieving URL: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -135,7 +135,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("failed to add shorten url to the storage", err)
+		h.logger.Error("failed to add shorten url to the storage: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -145,7 +145,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
-		h.logger.Error("failed to get full url: %w", err)
+		h.logger.Error("failed to get full url: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -154,7 +154,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		Result: fullShortenURL,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error("failed to write response body", err)
+		h.logger.Error("failed to write response body: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -190,7 +190,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("error storing URL", err)
+		h.logger.Error("error storing URL: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -200,7 +200,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
-		h.logger.Error("failed to get full url: %w", err)
+		h.logger.Error("failed to get full url: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

@@ -81,7 +81,7 @@ func RequestCompressorMiddleware(logger Logger) func(next http.Handler) http.Han
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 				cr, err := newCompressReader(r.Body)
 				if err != nil {
-					logger.Error("failed to create gzip reader: %w", err)
+					logger.Error("failed to create gzip reader: %v", err)
 					ow.WriteHeader(http.StatusInternalServerError)
 					return
 				}
