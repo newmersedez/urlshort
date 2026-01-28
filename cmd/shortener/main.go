@@ -37,6 +37,6 @@ func run() error {
 
 	shortener := service.NewURLShortenerService()
 
-	logger.Info("Starting server at adress %s", cfg.ServerAddr)
+	logger.Info("Starting server at address: %s", cfg.ServerAddr)
 	return handler.Serve(*cfg, repository, shortener, logger)
 }

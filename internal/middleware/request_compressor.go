@@ -70,7 +70,7 @@ func RequestCompressorMiddleware(next http.Handler) http.Handler {
 	compressionFn := func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			cw := newCompressWriter(w)
 
 			defer cw.Close()

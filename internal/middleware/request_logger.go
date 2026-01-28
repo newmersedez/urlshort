@@ -52,7 +52,7 @@ func RequestLoggerMiddleware(logger Logger) func(h http.Handler) http.Handler {
 			h.ServeHTTP(&lw, r)
 
 			duration := time.Since(start)
-			logger.Info("Request finished %s %s - %s - %s ms - %d bytes", r.Method, r.RequestURI, responseData.status, duration, responseData.size)
+			logger.Info("Request finished %s %s - %d - %s - %d bytes", r.Method, r.RequestURI, responseData.status, duration, responseData.size)
 		}
 		return http.HandlerFunc(logFn)
 	}
