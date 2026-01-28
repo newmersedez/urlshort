@@ -49,7 +49,7 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(h http.Handler) http.Hand
 			duration := time.Since(start)
 			logger.Info("Request finished", 
 				"method", r.Method, 
-				"uru", r.RequestURI, 
+				"uri", r.RequestURI, 
 				"status", responseData.status, 
 				"duration", duration, 
 				"size", responseData.size)
