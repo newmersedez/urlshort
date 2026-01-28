@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"fmt"
 
-	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/model"
-	"go.uber.org/zap"
 )
 
 type Repository struct {
@@ -73,9 +72,7 @@ func (r *Repository) restoreDataFromFile() error {
 	for decoder.More() {
 		var url model.ShortenURL
 		if err := decoder.Decode(&url); err != nil {
-			logger.Log.Error("failed to restore url from file", zap.Int("line", line), zap.Error(err))
-			line++
-			continue
+			return fmt.Errorf("failed to restore url at line %d: %w", line, err)
 		}
 		if _, exists := r.items[url.Key]; !exists {
 			r.items[url.Key] = url

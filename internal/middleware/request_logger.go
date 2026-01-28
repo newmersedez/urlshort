@@ -3,10 +3,15 @@ package middleware
 import (
 	"net/http"
 	"time"
-
-	"github.com/newmersedez/urlshort/internal/logger"
-	"go.uber.org/zap"
 )
+
+type Logger interface {
+	Debug(msg string, args...any)
+	Info(msg string, args...any)
+	Warn(msg string, args...any)
+	Error(msg string, args...any)
+	Dispose()
+}
 
 type (
 	responseData struct {
@@ -31,35 +36,24 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func RequestLoggerMiddleware(h http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+func RequestLoggerMiddleware(logger Logger) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		logFn := func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			logger.Info("Request starting %s %s", r.Method, r.RequestURI)
 
-		logger.Log.Info(
-			"Request starting",
-			zap.String("method", r.Method),
-			zap.String("uri", r.RequestURI),
-		)
+			responseData := new(responseData)
 
-		responseData := new(responseData)
+			lw := loggingResponseWriter{
+				ResponseWriter: w,
+				responseData:   responseData,
+			}
 
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
+			h.ServeHTTP(&lw, r)
+
+			duration := time.Since(start)
+			logger.Info("Request finished %s %s - %s - %s ms - %d bytes", r.Method, r.RequestURI, responseData.status, duration, responseData.size)
 		}
-
-		h.ServeHTTP(&lw, r)
-
-		duration := time.Since(start)
-
-		logger.Log.Info(
-			"Request finished",
-			zap.String("method", r.Method),
-			zap.String("uri", r.RequestURI),
-			zap.Int("status", responseData.status),
-			zap.Duration("duration", duration),
-			zap.Int("size", responseData.size),
-		)
+		return http.HandlerFunc(logFn)
 	}
-	return http.HandlerFunc(logFn)
 }

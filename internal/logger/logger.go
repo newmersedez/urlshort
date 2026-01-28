@@ -8,13 +8,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Log *zap.Logger = zap.NewNop()
+type Logger struct {
+	log	*zap.SugaredLogger
+}
 
-func NewLogger(logLevel string) error {
+func NewLogger(logLevel string) (*Logger, error) {
 	level, err := zap.ParseAtomicLevel(logLevel)
 
 	if err != nil {
-		return fmt.Errorf("failed to parse log level: %w", err)
+		return nil, fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	cfg := zap.NewProductionConfig()
@@ -25,15 +27,30 @@ func NewLogger(logLevel string) error {
 	cfg.EncoderConfig.ConsoleSeparator = " "
 	cfg.DisableCaller = true
 
-	lg, err := cfg.Build()
+	log, err := cfg.Build()
 	if err != nil {
-		return fmt.Errorf("failed to build logger instance: %w", err)
+		return nil, fmt.Errorf("failed to build logger instance: %w", err)
 	}
 
-	Log = lg
-	return nil
+	return &Logger{log: log.Sugar()}, nil
 }
 
-func Dispose() {
-	Log.Sync()
+func (l *Logger) Debug(msg string, args...any) {
+	l.log.Debug(msg, args)
+}
+
+func (l *Logger) Info(msg string, args...any) {
+	l.log.Info(msg, args)
+}
+
+func (l *Logger) Warn(msg string, args...any) {
+	l.log.Warn(msg, args)
+}
+
+func (l *Logger) Error(msg string, args...any) {
+	l.log.Error(msg, args)
+}
+
+func (l *Logger) Dispose() {
+	l.log.Sync()
 }

@@ -9,8 +9,6 @@ import (
 	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
-
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -25,7 +23,8 @@ func run() error {
 		return fmt.Errorf("failed to create config instance: %w", err)
 	}
 
-	if err := logger.NewLogger(cfg.LogLevel); err != nil {
+	logger, err := logger.NewLogger(cfg.LogLevel)
+	if err != nil {
 		return fmt.Errorf("failed to create logger instance: %w", err)
 	}
 	defer logger.Dispose()
@@ -38,6 +37,6 @@ func run() error {
 
 	shortener := service.NewURLShortenerService()
 
-	logger.Log.Info("Starting server", zap.String("address", cfg.ServerAddr))
-	return handler.Serve(*cfg, repository, shortener)
+	logger.Info("Starting server at adress %s", cfg.ServerAddr)
+	return handler.Serve(*cfg, repository, shortener, logger)
 }
