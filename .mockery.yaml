@@ -1,5 +1,0 @@
-packages:
-  github.com/newmersedez/urlshort/internal/handler:
-    interfaces:
-      Repository:
-      Shortener:

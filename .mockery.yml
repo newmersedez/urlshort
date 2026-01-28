@@ -1,0 +1,11 @@
+template: testify
+packages:
+    github.com/newmersedez/urlshort/internal/handler:
+        config:
+            dir: "{{.InterfaceDir}}/mocks"
+            filename: "mock_{{.InterfaceName | snakecase}}.go"
+            pkgname: "mocks"
+            structname: "Mock{{.InterfaceName}}"
+        interfaces:
+            Shortener:
+            Repository:

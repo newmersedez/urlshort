@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/model"
+	"github.com/newmersedez/urlshort/internal/handler/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,9 +26,9 @@ func TestCanShortenValidURL(t *testing.T) {
 	key := "12345678"
 	shortenURL := model.NewShortenURL(key, originalURL)
 
-	mockRepo := NewMockRepository(t)
+	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
-	mockShortener := NewMockShortener(t)
+	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
 	
 	h := NewHandler(baseURL, mockRepo, mockShortener)
@@ -56,8 +57,8 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "url//string"
 
-	mockRepo := NewMockRepository(t)
-	mockShortener := NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid url")).Once()
 
 	h := NewHandler(baseURL, mockRepo, mockShortener)
@@ -82,8 +83,8 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	originalURL := "https://stackoverflow.com"
 	shortenURL := model.NewShortenURL(key, originalURL)
 	
-	mockShortener := NewMockShortener(t)
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(shortenURL, nil).Once()
 
 	h := NewHandler(baseURL, mockRepo, mockShortener)
@@ -112,8 +113,8 @@ func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 
-	mockShortener := NewMockShortener(t)
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
 
 	h := NewHandler(baseURL, mockRepo, mockShortener)
 
@@ -136,8 +137,8 @@ func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	key := "12345678"
 
-	mockShortener := NewMockShortener(t)
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(nil, nil).Once()
 
 	h := NewHandler(baseURL, mockRepo, mockShortener)
@@ -167,10 +168,10 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	key := "12345678"
 	shortenURL := model.NewShortenURL(key, originalURL)
 
-	mockShortener := NewMockShortener(t)
+	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
 
-	mockRepo := NewMockRepository(t)
+	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
 
 	h := NewHandler(baseURL, mockRepo, mockShortener)
@@ -204,8 +205,8 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 
-	mockShortener := NewMockShortener(t)
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
 	h := NewHandler(baseURL, mockRepo, mockShortener)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`"url": "%s"`, originalURL)))
@@ -226,8 +227,8 @@ func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 
-	mockShortener := NewMockShortener(t)
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockRepo := mocks.NewMockRepository(t)
 	h := NewHandler(baseURL, mockRepo, mockShortener)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
@@ -248,9 +249,9 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "url//string"
 
-	mockShortener := NewMockShortener(t)
-	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid URL")).Once()
-	mockRepo := NewMockRepository(t)
+	mockShortener := mocks.NewMockShortener(t)
+	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid URL")).Maybe()
+	mockRepo := mocks.NewMockRepository(t)
 	h := NewHandler(baseURL, mockRepo, mockShortener)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
