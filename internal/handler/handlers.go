@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"io"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/logger"
+	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/model"
 	"go.uber.org/zap"
 )
@@ -24,29 +27,56 @@ type Shortener interface {
 	Shorten(url string) (string, error)
 }
 
-type ShortenURLRequest struct {
+type shortenURLRequest struct {
 	URL string `json:"url"`
 }
 
-type ShortenURLResponse struct {
+type shortenURLResponse struct {
 	Result string `json:"result"`
 }
 
-type Handlers struct {
+type handlers struct {
 	baseURL   string
 	store     Repository
 	shortener Shortener
 }
 
-func NewHandler(baseURL string, store Repository, shortener Shortener) *Handlers {
-	return &Handlers{
+func Serve(cfg config.Config, store Repository, shortener Shortener) error {
+	handler := newHandlers(cfg.BaseURL, store, shortener)
+	router := newRouter(handler)
+
+	server := &http.Server{
+		Addr:         cfg.ServerAddr,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	
+	return server.ListenAndServe()
+}
+
+func newHandlers(baseURL string, store Repository, shortener Shortener) *handlers {
+	return &handlers{
 		baseURL:   baseURL,
 		store:     store,
 		shortener: shortener,
 	}
 }
 
-func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
+func newRouter(handler *handlers) *chi.Mux {
+	router := chi.NewRouter()
+	router.Use(middleware.RequestLoggerMiddleware)
+	router.Use(middleware.RequestCompressorMiddleware)
+
+	router.Post("/", handler.shortenURLViaPlainTextHandle)
+	router.Post("/api/shorten", handler.shortenURLViaJSONHandle)
+	router.Get("/{id}", handler.getOriginURLHandle)
+
+	return router
+}
+
+func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		http.Error(w, "id is required", http.StatusBadRequest)
@@ -69,13 +99,13 @@ func (h *Handlers) GetOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.Value, http.StatusTemporaryRedirect)
 }
 
-func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
 	}
 
-	var request ShortenURLRequest
+	var request shortenURLRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "request body is not a valid JSON", http.StatusBadRequest)
 		return
@@ -105,7 +135,7 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	response := ShortenURLResponse{
+	response := shortenURLResponse{
 		Result: fmt.Sprintf("%s/%s", h.baseURL, url.Key),
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -115,7 +145,7 @@ func (h Handlers) ShortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (h Handlers) ShortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "text/plain" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
