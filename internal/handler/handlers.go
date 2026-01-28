@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -125,16 +124,16 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	shortURL, err := h.shortener.Shorten(request.URL)
+	key, err := h.shortener.Shorten(request.URL)
 	if err != nil {
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
-	url := model.NewShortenURL(shortURL, request.URL)
+	shortenURL := model.NewShortenURL(key, request.URL)
 
-	err = h.store.Add(ctx, url)
+	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		h.logger.Error("failed to add shorten url to the storage", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -144,8 +143,15 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
+	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
+	if err != nil {
+		h.logger.Error("failed to get full url: %w", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 	response := shortenURLResponse{
-		Result: fmt.Sprintf("%s/%s", h.baseURL, url.Key),
+		Result: fullShortenURL,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		h.logger.Error("failed to write response body", err)
@@ -173,14 +179,14 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	shortenValue, err := h.shortener.Shorten(originalURL)
+	key, err := h.shortener.Shorten(originalURL)
 	if err != nil {
 		http.Error(w, "failed to shorten URL", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
-	shortenURL := model.NewShortenURL(shortenValue, originalURL)
+	shortenURL := model.NewShortenURL(key, originalURL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
