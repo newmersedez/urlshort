@@ -66,29 +66,32 @@ func (c *compressReader) Close() error {
 	return c.gz.Close()
 }
 
-func RequestCompressorMiddleware(next http.Handler) http.Handler {
-	compressionFn := func(w http.ResponseWriter, r *http.Request) {
-		ow := w
+func RequestCompressorMiddleware(logger Logger) func(next http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		compressionFn := func(w http.ResponseWriter, r *http.Request) {
+			ow := w
 
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			cw := newCompressWriter(w)
+			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				cw := newCompressWriter(w)
 
-			defer cw.Close()
-			ow = cw
-		}
-
-		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-			cr, err := newCompressReader(r.Body)
-			if err != nil {
-				ow.WriteHeader(http.StatusInternalServerError)
-				return
+				defer cw.Close()
+				ow = cw
 			}
-			
-			defer cr.Close()
-			r.Body = cr
-		}
-		next.ServeHTTP(ow, r)
-	}
 
-	return http.HandlerFunc(compressionFn)
+			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+				cr, err := newCompressReader(r.Body)
+				if err != nil {
+					logger.Error("failed to create gzip reader: %w", err)
+					ow.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				
+				defer cr.Close()
+				r.Body = cr
+			}
+			h.ServeHTTP(ow, r)
+		}
+
+		return http.HandlerFunc(compressionFn)
+	}
 }

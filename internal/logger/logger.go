@@ -36,33 +36,20 @@ func NewLogger(logLevel string) (*Logger, error) {
 }
 
 func (l *Logger) Debug(msg string, args...any) {
-	if len(args) > 0 {
-		l.log.Debugf(msg, args...)
-	} else {
-		l.log.Debug(msg)
-	}
+	l.log.Debugf(msg, args...)
 }
 
 func (l *Logger) Info(msg string, args...any) {
-	if len(args) > 0 {
-		l.log.Infof(msg, args...)
-	} else {
-		l.log.Info(msg)
-	}}
+	l.log.Infof(msg, args...)
+}
 
 func (l *Logger) Warn(msg string, args...any) {
-	if len(args) > 0 {
-		l.log.Warnf(msg, args...)
-	} else {
-		l.log.Warn(msg)
-	}}
+	l.log.Warnf(msg, args...)
+}
 
 func (l *Logger) Error(msg string, args...any) {
-	if len(args) > 0 {
-		l.log.Errorf(msg, args...)
-	} else {
-		l.log.Error(msg)
-	}}
+	l.log.Errorf(msg, args...)
+}
 
 func (l *Logger) Dispose() {
 	l.log.Sync()
