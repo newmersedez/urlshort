@@ -25,21 +25,22 @@ func NewConfig() (*Config, error) {
 
 	parseFlags(&cfg)
 	if err := parseEnvironment(&cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
 	if err := validateServerAddress(cfg.ServerAddr); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate server address: %w", err)
 	}
 	if err := validateBaseURL(cfg.BaseURL); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate base URL: %w", err)
 	}
 	if err := validateLogLevel(cfg.LogLevel); err != nil {
-		return nil, err
-	}
+		return nil, fmt.Errorf("failed to validate log level: %w", err)
+	}	
 	if err := validateFileStoragePath(cfg.FileStoragePath); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate file storage path: %w", err)
 	}
+	
 	return &cfg, nil
 }
 
@@ -52,7 +53,12 @@ func parseFlags(cfg *Config) {
 }
 
 func parseEnvironment(cfg *Config) error {
-	return env.Parse(cfg)
+	err := env.Parse(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to parse environment variables: %w", err)
+	}
+
+	return nil
 }
 
 func validateServerAddress(serverAddress string) error {

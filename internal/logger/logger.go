@@ -11,7 +11,7 @@ func NewLogger(logLevel string) (*slog.Logger, error) {
     levelVar := new(slog.LevelVar)
     
     if err := setLogLevel(levelVar, logLevel); err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to set log level: %w", err)
     }
 
     options := &slog.HandlerOptions{
@@ -27,8 +27,9 @@ func NewLogger(logLevel string) (*slog.Logger, error) {
 func setLogLevel(levelVar *slog.LevelVar, levelStr string) error {
     level, err := parseLogLevel(levelStr)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to determine log level from value %s: %w", levelStr, err)
     }
+
     levelVar.Set(level)
     return nil
 }

@@ -21,7 +21,7 @@ func NewRepository(filepath string) (*Repository, error) {
 	file, err := os.OpenFile(filepath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file %s: %w", filepath, err)
 	}
 
 	repo := &Repository{
@@ -32,7 +32,7 @@ func NewRepository(filepath string) (*Repository, error) {
 	}
 
 	if err := repo.restoreDataFromFile(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to restore data from file %s: %w", filepath, err)
 	}
 
 	return repo, nil
