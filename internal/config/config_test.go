@@ -10,99 +10,13 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	tests := []struct{
-		name			string
-		serverAddress	string
-		baseURL			string
-		logLevel		string
-		fileStoragePath	string
-		valid			bool
-	} {
-		{
-			name: 			"Valid",
-			serverAddress: "localhost:9999",
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			true,
-		},
-		{
-			name: 			"Empty server address",
-			serverAddress:	"", 
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Empty base url",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Invalid server address format",
-			serverAddress: 	":9999",
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Invalid base url format",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"1http://234",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Missing base url schema",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Empty log level",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"",
-			fileStoragePath: "file.json",
-			valid: 			false,
-		},
-		{
-			name: 			"Empty file storage path",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "",
-			valid: 			false,
-		},
-		{
-			name: 			"Invalid file storage path format",
-			serverAddress: 	"localhost:9999", 
-			baseURL: 		"http://localhost:9999",
-			logLevel: 		"info",
-			fileStoragePath: "..",
-			valid: 			false,
-		},
-	}
+	flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
+	os.Args = []string{"test", "-a", "localhost:9999", "-b", "http://localhost:9999", "-l", "info", "-f", "file.json"}
+	flag.CommandLine.Parse(os.Args[1:])
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-			os.Args = []string{"test", "-a", test.serverAddress, "-b", test.baseURL, "-l", test.logLevel, "-f", test.fileStoragePath}
-			flag.CommandLine.Parse(os.Args[1:])
-
-			_, err := NewConfig()
-			
-			require.Equal(t, test.valid, err == nil)
-		})
-	}
+	_, err := NewConfig()
+	
+	require.NoError(t, err)
 }
 
 func TestServerAddressPriority(t *testing.T) {

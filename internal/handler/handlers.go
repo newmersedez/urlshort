@@ -3,11 +3,13 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
-	"log/slog"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
@@ -41,27 +43,28 @@ type handlers struct {
 }
 
 func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger) error {
-	handler := newHandlers(cfg.BaseURL, store, shortener, logger)
-	router := newRouter(handler)
-
-	server := &http.Server{
-		Addr:			cfg.ServerAddr,
-		Handler:		router,
-		ReadTimeout:	10 * time.Second,
-		WriteTimeout:	10 * time.Second,
-		IdleTimeout:	60 * time.Second,
+	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create handlers: %w", err)
+	}
+	
+	server, err := newServer(cfg.ServerAddr, newRouter(handler))
+	if err != nil {
+		return fmt.Errorf("failed to create handlers: %w", err)
 	}
 	
 	return server.ListenAndServe()
 }
 
-func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger) *handlers {
-	return &handlers{
+func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger) (*handlers, error) {
+	handlers := &handlers{
 		baseURL:	baseURL,
 		store:		store,
 		shortener:	shortener,
 		logger:		logger,
 	}
+	
+	return handlers, nil
 }
 
 func newRouter(handler *handlers) *chi.Mux {
@@ -75,6 +78,22 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Get("/{id}", handler.getOriginURLHandle)
 
 	return router
+}
+
+func newServer(address string, router *chi.Mux) (*http.Server, error) {
+	if address == "" {
+		return nil, errors.New("server address is not set")
+	}
+
+	server := &http.Server{
+		Addr:			address,
+		Handler:		router,
+		ReadTimeout:	10 * time.Second,
+		WriteTimeout:	10 * time.Second,
+		IdleTimeout:	60 * time.Second,
+	}
+
+	return server, nil
 }
 
 func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {

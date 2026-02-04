@@ -35,7 +35,7 @@ func TestCanShortenValidURL(t *testing.T) {
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
 	
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
@@ -67,7 +67,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid url")).Once()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
@@ -95,7 +95,7 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(shortenURL, nil).Once()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -125,7 +125,7 @@ func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 	logger := slog.Default()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -152,7 +152,7 @@ func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(nil, nil).Once()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -187,7 +187,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
@@ -222,7 +222,7 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	mockShortener := mocks.NewMockShortener(t)
 	mockRepo := mocks.NewMockRepository(t)
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`"url": "%s"`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
@@ -246,7 +246,7 @@ func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 	logger := slog.Default()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "text/xml")
@@ -272,7 +272,7 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid URL")).Maybe()
 
-	h := newHandlers(baseURL, mockRepo, mockShortener, logger)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")

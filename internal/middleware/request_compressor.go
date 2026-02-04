@@ -69,7 +69,7 @@ func (c *compressReader) Close() error {
 
 func RequestCompressorMiddleware(logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		compressionFn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ow := w
 
 			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -91,8 +91,6 @@ func RequestCompressorMiddleware(logger *slog.Logger) func(next http.Handler) ht
 				r.Body = cr
 			}
 			h.ServeHTTP(ow, r)
-		}
-
-		return http.HandlerFunc(compressionFn)
+		})
 	}
 }
