@@ -265,53 +265,68 @@ func TestFileStoragePathPriority(t *testing.T) {
 }
 
 func TestDatabaseDSNPriority(t *testing.T) {
-	tests := []struct {
-		name      string
-		envName   string
-		envValue  string
-		flagName  string
-		flagValue string
-		want      string
-	}{
-		{
-			name:      "Environment value has priority if set",
-			envName:   "DATABASE_CONN_STRING",
-			envValue:  "host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
-			flagName:  "-d",
-			flagValue: "host=localhost user=second password=1234 dbname=urlshort sslmode=disable",
-			want:      "host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
-		},
-		{
-			name:      "Flag value has priority if environment value is not set",
-			envName:   "",
-			envValue:  "",
-			flagName:  "-d",
-			flagValue: "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
-			want:      "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
-		},
-	}
+    // Сохраняем оригинальные os.Args
+    originalArgs := os.Args
+    defer func() { os.Args = originalArgs }()
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
+    tests := []struct {
+        name           string
+        envVars        map[string]string
+        flagName       string
+        flagValue      string
+        expectedResult string
+    }{
+        {
+            name: "Environment variable has priority",
+            envVars: map[string]string{
+                "DATABASE_CONN_STRING": "env-dsn-value",
+            },
+            flagName:       "-d",
+            flagValue:      "flag-dsn-value",
+            expectedResult: "env-dsn-value",
+        },
+        {
+            name:      "Flag is used when no env var",
+            envVars:   map[string]string{},
+            flagName:  "-d",
+            flagValue: "flag-dsn-value",
+            expectedResult: "flag-dsn-value",
+        },
+        {
+            name:      "Empty when neither env nor flag",
+            envVars:   map[string]string{},
+            flagName:  "",
+            flagValue: "",
+            expectedResult: "",
+        },
+    }
 
-			if test.envValue != "" {
-				t.Setenv(test.envName, test.envValue)
-			} else {
-				os.Unsetenv(test.envName)
-			}
-
-			if test.flagName != "" {
-				os.Args = []string{"test", test.flagName, test.flagValue}
-				flag.CommandLine.Parse(os.Args[1:])
-			} else {
-				os.Args = []string{"test"}
-				flag.CommandLine.Parse(os.Args[1:])
-			}
-
-			cfg, err := NewConfig()
-			require.NoError(t, err)
-			require.Equal(t, test.want, cfg.DatabaseDSN)
-		})
-	}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // 1. Очищаем переменные окружения
+            for key := range tt.envVars {
+                os.Unsetenv(key)
+            }
+            
+            // 2. Устанавливаем нужные переменные
+            for key, value := range tt.envVars {
+                t.Setenv(key, value)
+            }
+            
+            // 3. Настраиваем аргументы командной строки
+            if tt.flagName != "" {
+                os.Args = []string{"cmd", tt.flagName, tt.flagValue}
+            } else {
+                os.Args = []string{"cmd"}
+            }
+            
+            // 4. Сбрасываем флаги
+            flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+            
+            // 5. Создаем конфиг
+            cfg, err := NewConfig()
+            require.NoError(t, err)
+            require.Equal(t, tt.expectedResult, cfg.DatabaseDSN)
+        })
+    }
 }
