@@ -6,7 +6,6 @@ import (
 	urltools "net/url"
 )
 
-
 type Shortener struct{}
 
 func NewURLShortenerService() *Shortener {

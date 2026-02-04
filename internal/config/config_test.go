@@ -11,58 +11,58 @@ import (
 
 func TestNewConfig(t *testing.T) {
 	flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-	os.Args = []string{"test", 
-	"-a", "localhost:9999", 
-	"-b", "http://localhost:9999", 
-	"-l", "info", 
-	"-f", "file.json", 
-	"-d", "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable"}
+	os.Args = []string{"test",
+		"-a", "localhost:9999",
+		"-b", "http://localhost:9999",
+		"-l", "info",
+		"-f", "file.json",
+		"-d", "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable"}
 	flag.CommandLine.Parse(os.Args[1:])
 
 	_, err := NewConfig()
-	
+
 	require.NoError(t, err)
 }
 
 func TestServerAddressPriority(t *testing.T) {
 	tests := []struct {
-		name		string
-		envName		string
-		envValue 	string
-		flagName	string
-		flagValue	string
-		want     	string
+		name      string
+		envName   string
+		envValue  string
+		flagName  string
+		flagValue string
+		want      string
 	}{
 		{
-			name:		"Environment value has priority if set",
-			envName:	"SERVER_ADDRESS",
-			envValue:	"localhost:9999",
-			flagName:	"-a",
-			flagValue:	"localhost:8888",
-			want:    	"localhost:9999",
+			name:      "Environment value has priority if set",
+			envName:   "SERVER_ADDRESS",
+			envValue:  "localhost:9999",
+			flagName:  "-a",
+			flagValue: "localhost:8888",
+			want:      "localhost:9999",
 		},
 		{
-			name:		"Flag value has priority if environment value is not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"-a",
-			flagValue:	"localhost:8888",
-			want:    	"localhost:8888",
+			name:      "Flag value has priority if environment value is not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "-a",
+			flagValue: "localhost:8888",
+			want:      "localhost:8888",
 		},
 		{
-			name:		"Default value if flag and value are not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"",
-			flagValue:	"",
-			want:    	"localhost:8080",
+			name:      "Default value if flag and value are not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "",
+			flagValue: "",
+			want:      "localhost:8080",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-			
+
 			if test.envValue != "" {
 				t.Setenv(test.envName, test.envValue)
 			} else {
@@ -86,36 +86,36 @@ func TestServerAddressPriority(t *testing.T) {
 
 func TestBaseURLPriority(t *testing.T) {
 	tests := []struct {
-		name		string
-		envName		string
-		envValue 	string
-		flagName	string
-		flagValue	string
-		want     	string
+		name      string
+		envName   string
+		envValue  string
+		flagName  string
+		flagValue string
+		want      string
 	}{
 		{
-			name:		"Environment value has priority if set",
-			envName:	"BASE_URL",
-			envValue:	"http://localhost:9999",
-			flagName:	"-b",
-			flagValue:	"http://localhost:8888",
-			want:    	"http://localhost:9999",
+			name:      "Environment value has priority if set",
+			envName:   "BASE_URL",
+			envValue:  "http://localhost:9999",
+			flagName:  "-b",
+			flagValue: "http://localhost:8888",
+			want:      "http://localhost:9999",
 		},
 		{
-			name:		"Flag value has priority if environment value is not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"-b",
-			flagValue:	"http://localhost:8888",
-			want:    	"http://localhost:8888",
+			name:      "Flag value has priority if environment value is not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "-b",
+			flagValue: "http://localhost:8888",
+			want:      "http://localhost:8888",
 		},
 		{
-			name:		"Default value if flag and value are not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"",
-			flagValue:	"",
-			want:    	"http://localhost:8080",
+			name:      "Default value if flag and value are not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "",
+			flagValue: "",
+			want:      "http://localhost:8080",
 		},
 	}
 
@@ -146,36 +146,36 @@ func TestBaseURLPriority(t *testing.T) {
 
 func TestLogLevelPriority(t *testing.T) {
 	tests := []struct {
-		name		string
-		envName		string
-		envValue 	string
-		flagName	string
-		flagValue	string
-		want     	string
+		name      string
+		envName   string
+		envValue  string
+		flagName  string
+		flagValue string
+		want      string
 	}{
 		{
-			name:		"Environment value has priority if set",
-			envName:	"LOG_LEVEL",
-			envValue:	"warn",
-			flagName:	"-l",
-			flagValue:	"debug",
-			want:    	"warn",
+			name:      "Environment value has priority if set",
+			envName:   "LOG_LEVEL",
+			envValue:  "warn",
+			flagName:  "-l",
+			flagValue: "debug",
+			want:      "warn",
 		},
 		{
-			name:		"Flag value has priority if environment value is not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"-l",
-			flagValue:	"warn",
-			want:    	"warn",
+			name:      "Flag value has priority if environment value is not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "-l",
+			flagValue: "warn",
+			want:      "warn",
 		},
 		{
-			name:		"Default value if flag and value are not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"",
-			flagValue:	"",
-			want:    	"info",
+			name:      "Default value if flag and value are not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "",
+			flagValue: "",
+			want:      "info",
 		},
 	}
 
@@ -206,36 +206,36 @@ func TestLogLevelPriority(t *testing.T) {
 
 func TestFileStoragePathPriority(t *testing.T) {
 	tests := []struct {
-		name		string
-		envName		string
-		envValue 	string
-		flagName	string
-		flagValue	string
-		want     	string
+		name      string
+		envName   string
+		envValue  string
+		flagName  string
+		flagValue string
+		want      string
 	}{
 		{
-			name:		"Environment value has priority if set",
-			envName:	"FILE_STORAGE_PATH",
-			envValue:	"priority.json",
-			flagName:	"-f",
-			flagValue:	"secondary.json",
-			want:    	"priority.json",
+			name:      "Environment value has priority if set",
+			envName:   "FILE_STORAGE_PATH",
+			envValue:  "priority.json",
+			flagName:  "-f",
+			flagValue: "secondary.json",
+			want:      "priority.json",
 		},
 		{
-			name:		"Flag value has priority if environment value is not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"-f",
-			flagValue:	"priority.json",
-			want:    	"priority.json",
+			name:      "Flag value has priority if environment value is not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "-f",
+			flagValue: "priority.json",
+			want:      "priority.json",
 		},
 		{
-			name:		"Default value if flag and value are not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"",
-			flagValue:	"",
-			want:    	filepath.Join(os.TempDir(), "storage.json"),
+			name:      "Default value if flag and value are not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "",
+			flagValue: "",
+			want:      filepath.Join(os.TempDir(), "storage.json"),
 		},
 	}
 
@@ -266,36 +266,36 @@ func TestFileStoragePathPriority(t *testing.T) {
 
 func TestDatabaseDSNPriority(t *testing.T) {
 	tests := []struct {
-		name		string
-		envName		string
-		envValue 	string
-		flagName	string
-		flagValue	string
-		want     	string
+		name      string
+		envName   string
+		envValue  string
+		flagName  string
+		flagValue string
+		want      string
 	}{
 		{
-			name:		"Environment value has priority if set",
-			envName:	"DATABASE_DSN",
-			envValue:	"host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
-			flagName:	"-d",
-			flagValue:	"host=localhost user=second password=1234 dbname=urlshort sslmode=disable",
-			want:    	"host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
+			name:      "Environment value has priority if set",
+			envName:   "DATABASE_DSN",
+			envValue:  "host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
+			flagName:  "-d",
+			flagValue: "host=localhost user=second password=1234 dbname=urlshort sslmode=disable",
+			want:      "host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
 		},
 		{
-			name:		"Flag value has priority if environment value is not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"-d",
-			flagValue:	"host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
-			want:    	"host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
+			name:      "Flag value has priority if environment value is not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "-d",
+			flagValue: "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
+			want:      "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
 		},
 		{
-			name:		"Default value if flag and value are not set",
-			envName:	"",
-			envValue:	"",
-			flagName:	"",
-			flagValue:	"",
-			want:    	"",
+			name:      "Default value if flag and value are not set",
+			envName:   "",
+			envValue:  "",
+			flagName:  "",
+			flagValue: "",
+			want:      "host=localhost user=postgres password=1234 dbname=postgres sslmode=disable",
 		},
 	}
 

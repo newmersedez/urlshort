@@ -28,13 +28,13 @@ func TestCanShortenValidURL(t *testing.T) {
 	shortenURL := model.NewShortenURL(key, originalURL)
 
 	logger := slog.Default()
-	
+
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
-	
+
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
-	
+
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
@@ -63,7 +63,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 
 	logger := slog.Default()
 	mockRepo := mocks.NewMockRepository(t)
-	
+
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid url")).Once()
 
@@ -88,10 +88,10 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	key := "12345678"
 	originalURL := "https://stackoverflow.com"
 	shortenURL := model.NewShortenURL(key, originalURL)
-	
+
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
-	
+
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(shortenURL, nil).Once()
 
@@ -148,7 +148,7 @@ func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
-	
+
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Get(mock.Anything, key).Return(nil, nil).Once()
 

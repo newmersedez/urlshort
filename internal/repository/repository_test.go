@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/newmersedez/urlshort/internal/model"
 	"github.com/stretchr/testify/require"
 )
@@ -12,9 +13,11 @@ import (
 func TestNewRepository(t *testing.T) {
 	// Arrange
 	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
+	db, _, _ := sqlmock.New()
+	defer db.Close()
 
 	// Act
-	repository, err := NewRepository(fileStoragePath)
+	repository, err := NewRepository(db, fileStoragePath)
 
 	// Assert
 	require.NoError(t, err)
@@ -32,8 +35,10 @@ func TestAdd(t *testing.T) {
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
 	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
+	db, _, _ := sqlmock.New()
+	defer db.Close()
 
-	repository, _ := NewRepository(fileStoragePath)
+	repository, _ := NewRepository(db, fileStoragePath)
 	defer os.Remove(fileStoragePath)
 
 	// Act
@@ -45,15 +50,16 @@ func TestAdd(t *testing.T) {
 	require.Equal(t, value, val.Value)
 }
 
-
 func TestGet(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
 	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
+	db, _, _ := sqlmock.New()
+	defer db.Close()
 
-	repository, _ := NewRepository(fileStoragePath)
+	repository, _ := NewRepository(db, fileStoragePath)
 	defer os.Remove(fileStoragePath)
 
 	repository.Add(t.Context(), shortenURL)

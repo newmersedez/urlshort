@@ -37,10 +37,10 @@ type shortenURLResponse struct {
 }
 
 type handlers struct {
-	baseURL		string
-	store		Repository
-	shortener	Shortener
-	logger		*slog.Logger
+	baseURL   string
+	store     Repository
+	shortener Shortener
+	logger    *slog.Logger
 }
 
 func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger) error {
@@ -48,23 +48,23 @@ func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slo
 	if err != nil {
 		return fmt.Errorf("failed to create handlers: %w", err)
 	}
-	
+
 	server, err := newServer(cfg.ServerAddr, newRouter(handler))
 	if err != nil {
 		return fmt.Errorf("failed to create handlers: %w", err)
 	}
-	
+
 	return server.ListenAndServe()
 }
 
 func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger) (*handlers, error) {
 	handlers := &handlers{
-		baseURL:	baseURL,
-		store:		store,
-		shortener:	shortener,
-		logger:		logger,
+		baseURL:   baseURL,
+		store:     store,
+		shortener: shortener,
+		logger:    logger,
 	}
-	
+
 	return handlers, nil
 }
 
@@ -88,11 +88,11 @@ func newServer(address string, router *chi.Mux) (*http.Server, error) {
 	}
 
 	server := &http.Server{
-		Addr:			address,
-		Handler:		router,
-		ReadTimeout:	10 * time.Second,
-		WriteTimeout:	10 * time.Second,
-		IdleTimeout:	60 * time.Second,
+		Addr:         address,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	return server, nil
@@ -181,7 +181,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
 	}
-	
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "request body is not a valid plain text", http.StatusBadRequest)
@@ -213,7 +213,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
 	if err != nil {
-		h.logger.Error("failed to get full url", "error",err)
+		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -224,7 +224,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 }
 
 func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 1 * time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
 	if err := h.store.Ping(ctx); err != nil {

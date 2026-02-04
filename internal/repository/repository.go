@@ -12,25 +12,25 @@ import (
 )
 
 type Repository struct {
-	db		*sql.DB
-	mu		sync.RWMutex
-	file	*os.File
-	encoder	*json.Encoder
-	items	map[string]model.ShortenURL
+	db      *sql.DB
+	mu      sync.RWMutex
+	file    *os.File
+	encoder *json.Encoder
+	items   map[string]model.ShortenURL
 }
 
 func NewRepository(db *sql.DB, filepath string) (*Repository, error) {
-	file, err := os.OpenFile(filepath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
-	
+	file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", filepath, err)
 	}
 
 	repo := &Repository{
-		db: db,
-		items: make(map[string]model.ShortenURL),
-		mu: sync.RWMutex{},
-		file: file,
+		db:      db,
+		items:   make(map[string]model.ShortenURL),
+		mu:      sync.RWMutex{},
+		file:    file,
 		encoder: json.NewEncoder(file),
 	}
 
@@ -65,9 +65,9 @@ func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) erro
 }
 
 func (r *Repository) Ping(ctx context.Context) error {
-    if err := r.db.PingContext(ctx); err != nil {
-        return fmt.Errorf("failed to ping DB: %w", err)
-    }
+	if err := r.db.PingContext(ctx); err != nil {
+		return fmt.Errorf("failed to ping DB: %w", err)
+	}
 
 	return nil
 }
@@ -78,7 +78,7 @@ func (r *Repository) Dispose() {
 
 func (r *Repository) restoreDataFromFile() error {
 	decoder := json.NewDecoder(r.file)
-	
+
 	line := 1
 	for decoder.More() {
 		var url model.ShortenURL
@@ -90,6 +90,6 @@ func (r *Repository) restoreDataFromFile() error {
 		}
 		line++
 	}
-	
+
 	return nil
 }

@@ -32,15 +32,15 @@ func run() error {
 		return fmt.Errorf("failed to create logger instance: %w", err)
 	}
 
-    db, err := sql.Open("pgx", cfg.DatabaseDSN)
-    if err != nil {
+	db, err := sql.Open("pgx", cfg.DatabaseDSN)
+	if err != nil {
 		return fmt.Errorf("failed to create DB instance: %w", err)
-    }
+	}
 	defer db.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second);
+	ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
 	defer cancel()
-	
+
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to connect to DB: %w", err)
 	}

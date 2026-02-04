@@ -33,8 +33,8 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(h http.Handler) http.Hand
 	return func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			logger.Info("Request starting", 
-				"method", r.Method, 
+			logger.Info("Request starting",
+				"method", r.Method,
 				"uri", r.RequestURI)
 
 			responseData := new(responseData)
@@ -47,11 +47,11 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(h http.Handler) http.Hand
 			h.ServeHTTP(&lw, r)
 
 			duration := time.Since(start)
-			logger.Info("Request finished", 
-				"method", r.Method, 
-				"uri", r.RequestURI, 
-				"status", responseData.status, 
-				"duration", duration, 
+			logger.Info("Request finished",
+				"method", r.Method,
+				"uri", r.RequestURI,
+				"status", responseData.status,
+				"duration", duration,
 				"size", responseData.size)
 		}
 		return http.HandlerFunc(logFn)

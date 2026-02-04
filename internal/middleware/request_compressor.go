@@ -86,7 +86,7 @@ func RequestCompressorMiddleware(logger *slog.Logger) func(next http.Handler) ht
 					ow.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				
+
 				defer cr.Close()
 				r.Body = cr
 			}
