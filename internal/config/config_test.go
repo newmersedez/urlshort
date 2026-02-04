@@ -275,7 +275,7 @@ func TestDatabaseDSNPriority(t *testing.T) {
 	}{
 		{
 			name:      "Environment value has priority if set",
-			envName:   "DATABASE_DSN",
+			envName:   "DATABASE_CONN_STRING",
 			envValue:  "host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
 			flagName:  "-d",
 			flagValue: "host=localhost user=second password=1234 dbname=urlshort sslmode=disable",
