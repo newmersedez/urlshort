@@ -20,6 +20,7 @@ import (
 type Repository interface {
 	Get(ctx context.Context, key string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	Ping(ctx context.Context) error
 	Dispose()
 }
 
@@ -76,6 +77,7 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Post("/", handler.shortenURLViaPlainTextHandle)
 	router.Post("/api/shorten", handler.shortenURLViaJSONHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
+	router.Get("/ping", handler.pingDatabaseHandle)
 
 	return router
 }
@@ -219,4 +221,16 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fullShortenURL))
+}
+
+func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 1 * time.Second)
+	defer cancel()
+
+	if err := h.store.Ping(ctx); err != nil {
+		h.logger.Error("failed to connect to the database", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

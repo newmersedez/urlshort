@@ -11,7 +11,12 @@ import (
 
 func TestNewConfig(t *testing.T) {
 	flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-	os.Args = []string{"test", "-a", "localhost:9999", "-b", "http://localhost:9999", "-l", "info", "-f", "file.json"}
+	os.Args = []string{"test", 
+	"-a", "localhost:9999", 
+	"-b", "http://localhost:9999", 
+	"-l", "info", 
+	"-f", "file.json", 
+	"-d", "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable"}
 	flag.CommandLine.Parse(os.Args[1:])
 
 	_, err := NewConfig()
@@ -255,6 +260,66 @@ func TestFileStoragePathPriority(t *testing.T) {
 			cfg, err := NewConfig()
 			require.NoError(t, err)
 			require.Equal(t, test.want, cfg.FileStoragePath)
+		})
+	}
+}
+
+func TestDatabaseDSNPriority(t *testing.T) {
+	tests := []struct {
+		name		string
+		envName		string
+		envValue 	string
+		flagName	string
+		flagValue	string
+		want     	string
+	}{
+		{
+			name:		"Environment value has priority if set",
+			envName:	"DATABASE_DSN",
+			envValue:	"host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
+			flagName:	"-d",
+			flagValue:	"host=localhost user=second password=1234 dbname=urlshort sslmode=disable",
+			want:    	"host=localhost user=first password=1234 dbname=urlshort sslmode=disable",
+		},
+		{
+			name:		"Flag value has priority if environment value is not set",
+			envName:	"",
+			envValue:	"",
+			flagName:	"-d",
+			flagValue:	"host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
+			want:    	"host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
+		},
+		{
+			name:		"Default value if flag and value are not set",
+			envName:	"",
+			envValue:	"",
+			flagName:	"",
+			flagValue:	"",
+			want:    	"",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
+
+			if test.envValue != "" {
+				t.Setenv(test.envName, test.envValue)
+			} else {
+				os.Unsetenv(test.envName)
+			}
+
+			if test.flagName != "" {
+				os.Args = []string{"test", test.flagName, test.flagValue}
+				flag.CommandLine.Parse(os.Args[1:])
+			} else {
+				os.Args = []string{"test"}
+				flag.CommandLine.Parse(os.Args[1:])
+			}
+
+			cfg, err := NewConfig()
+			require.NoError(t, err)
+			require.Equal(t, test.want, cfg.DatabaseDSN)
 		})
 	}
 }

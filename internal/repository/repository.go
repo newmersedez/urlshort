@@ -2,22 +2,24 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
-	"fmt"
 
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
 type Repository struct {
+	db		*sql.DB
 	mu		sync.RWMutex
 	file	*os.File
 	encoder	*json.Encoder
 	items	map[string]model.ShortenURL
 }
 
-func NewRepository(filepath string) (*Repository, error) {
+func NewRepository(db *sql.DB, filepath string) (*Repository, error) {
 	file, err := os.OpenFile(filepath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	
 	if err != nil {
@@ -25,6 +27,7 @@ func NewRepository(filepath string) (*Repository, error) {
 	}
 
 	repo := &Repository{
+		db: db,
 		items: make(map[string]model.ShortenURL),
 		mu: sync.RWMutex{},
 		file: file,
@@ -58,6 +61,14 @@ func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) erro
 		r.encoder.Encode(shortenURL)
 		r.items[shortenURL.Key] = *shortenURL
 	}
+	return nil
+}
+
+func (r *Repository) Ping(ctx context.Context) error {
+    if err := r.db.PingContext(ctx); err != nil {
+        return fmt.Errorf("failed to ping DB: %w", err)
+    }
+
 	return nil
 }
 

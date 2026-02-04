@@ -18,7 +18,7 @@ func NewLogger(logLevel string) (*slog.Logger, error) {
         Level: levelVar,
     }
 
-	handler := slog.NewTextHandler(os.Stderr, options)
+	handler := slog.NewJSONHandler(os.Stderr, options)
 	logger := slog.New(handler)
     
 	return logger, nil
