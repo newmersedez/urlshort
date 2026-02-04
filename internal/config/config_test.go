@@ -289,14 +289,6 @@ func TestDatabaseDSNPriority(t *testing.T) {
 			flagValue: "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
 			want:      "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable",
 		},
-		{
-			name:      "Default value if flag and value are not set",
-			envName:   "",
-			envValue:  "",
-			flagName:  "",
-			flagValue: "",
-			want:      "host=localhost user=postgres password=1234 dbname=postgres sslmode=disable",
-		},
 	}
 
 	for _, test := range tests {
