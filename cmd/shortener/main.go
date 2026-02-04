@@ -1,46 +1,41 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
-	"time"
 
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/chi/v5"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
+	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
 )
 
 func main() {
-	logger := log.Default()
-
-	if err := run(logger); err != nil {
-		logger.Fatal(err)
+	if err := run(); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func run(logger *log.Logger) error {
-	cfg := config.NewConfig()
-
-	store := repository.NewRepository()
-	shortener := service.NewURLShortenerService()
-	handler := handler.NewHandler(cfg.BaseURL, store, shortener, logger)
-
-	router := chi.NewRouter()
-	router.Use(middleware.Logger)
-	router.Post("/", handler.ShortenURLHandle)
-	router.Get("/{id}", handler.GetOriginURLHandle)
-
-	server := &http.Server{
-		Addr:         cfg.ServerAddr,
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
+func run() error {
+	cfg, err := config.NewConfig()
+	if err != nil {
+		return fmt.Errorf("failed to create config instance: %w", err)
 	}
 
-	logger.Printf("Starting server on %s", cfg.ServerAddr)
-	return server.ListenAndServe()
+	logger, err := logger.NewLogger(cfg.LogLevel)
+	if err != nil {
+		return fmt.Errorf("failed to create logger instance: %w", err)
+	}
+
+	repository, err := repository.NewRepository(cfg.FileStoragePath)
+	if err != nil {
+		return fmt.Errorf("failed to create repository instance: %w", err)
+	}
+	defer repository.Dispose()
+
+	shortener := service.NewURLShortenerService()
+
+	logger.Info("Starting server", "address", cfg.ServerAddr)
+	return handler.Serve(*cfg, repository, shortener, logger)
 }
