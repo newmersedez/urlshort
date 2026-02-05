@@ -266,7 +266,7 @@ func TestDatabaseDSNPriority(t *testing.T) {
         {
             name: "Environment variable has priority",
             envVars: map[string]string{
-                "DATABASE_CONN_STRING": "env-dsn-value",
+                "DATABASE_DSN": "env-dsn-value",
             },
             flagName:       "-d",
             flagValue:      "flag-dsn-value",
