@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/newmersedez/urlshort/internal/config"
@@ -37,13 +35,6 @@ func run() error {
 		return fmt.Errorf("failed to create DB instance: %w", err)
 	}
 	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to connect to DB: %w", err)
-	}
 
 	repository, err := repository.NewRepository(db, cfg.FileStoragePath)
 	if err != nil {
