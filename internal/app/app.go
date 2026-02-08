@@ -17,7 +17,7 @@ import (
 )
 
 type App struct {
-	DB         *sql.DB
+	db         *sql.DB
 	cfg        *config.Config
 	logger     *slog.Logger
 	repository handler.Repository
@@ -68,7 +68,7 @@ func NewApp() (*App, error) {
 		logger:     logger,
 		repository: repo,
 		shortener:  shortener,
-		DB:         db,
+		db:         db,
 	}, nil
 }
 
@@ -78,9 +78,14 @@ func (a *App) Run() error {
 }
 
 func (a *App) Migrate() error {
+	if a.db == nil {
+		a.logger.Info("No migrations were applied, skipping...")
+		return nil
+	}
+
 	a.logger.Info("Starting migrations...")
 
-	driver, err := postgres.WithInstance(a.DB, &postgres.Config{})
+	driver, err := postgres.WithInstance(a.db, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to migrate: %w", err)
 	}
@@ -102,7 +107,11 @@ func (a *App) Migrate() error {
 }
 
 func (a *App) Shutdown() error {
-	return a.DB.Close()
+	if a.db != nil {
+		return a.db.Close()
+	}
+
+	return nil
 }
 
 func newDatabaseConnection(dsn string) (*sql.DB, error) {
