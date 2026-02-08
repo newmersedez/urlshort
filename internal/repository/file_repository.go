@@ -38,11 +38,11 @@ func NewFileRepository(filepath string) (*FileRepository, error) {
 	return repo, nil
 }
 
-func (r *FileRepository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
+func (r *FileRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	shortenURL, exists := r.items[key]
+	shortenURL, exists := r.items[ID]
 	if !exists {
 		return nil, nil
 	}
@@ -54,19 +54,15 @@ func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.items[shortenURL.Key]; !exists {
+	if _, exists := r.items[shortenURL.ID]; !exists {
 		r.encoder.Encode(shortenURL)
-		r.items[shortenURL.Key] = *shortenURL
+		r.items[shortenURL.ID] = *shortenURL
 	}
 	return nil
 }
 
 func (r *FileRepository) Ping(ctx context.Context) error {
-	if err := r.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping DB: %w", err)
-	}
-
-	return nil
+	return nuk
 }
 
 func (r *FileRepository) Dispose() {
@@ -82,8 +78,8 @@ func (r *FileRepository) restoreDataFromFile() error {
 		if err := decoder.Decode(&url); err != nil {
 			return fmt.Errorf("failed to restore url at line %d: %w", line, err)
 		}
-		if _, exists := r.items[url.Key]; !exists {
-			r.items[url.Key] = url
+		if _, exists := r.items[url.ID]; !exists {
+			r.items[url.ID] = url
 		}
 		line++
 	}

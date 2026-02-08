@@ -1,13 +1,13 @@
 package model
 
 type ShortenURL struct {
-	Key   string
-	Value string
+	ID            string
+	OriginalValue string
 }
 
 func NewShortenURL(key, value string) *ShortenURL {
 	return &ShortenURL{
-		Key:   key,
-		Value: value,
+		ID:            key,
+		OriginalValue: value,
 	}
 }

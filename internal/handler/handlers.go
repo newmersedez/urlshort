@@ -18,7 +18,7 @@ import (
 )
 
 type Repository interface {
-	Get(ctx context.Context, key string) (*model.ShortenURL, error)
+	Get(ctx context.Context, ID string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	Ping(ctx context.Context) error
 	Dispose()
@@ -118,7 +118,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, url.Value, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
 func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
@@ -138,14 +138,14 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	key, err := h.shortener.Shorten(request.URL)
+	ID, err := h.shortener.Shorten(request.URL)
 	if err != nil {
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
-	shortenURL := model.NewShortenURL(key, request.URL)
+	shortenURL := model.NewShortenURL(ID, request.URL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
@@ -154,7 +154,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
+	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.ID)
 	if err != nil {
 		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -195,14 +195,14 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	key, err := h.shortener.Shorten(originalURL)
+	ID, err := h.shortener.Shorten(originalURL)
 	if err != nil {
 		http.Error(w, "failed to shorten URL", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
-	shortenURL := model.NewShortenURL(key, originalURL)
+	shortenURL := model.NewShortenURL(ID, originalURL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
@@ -211,7 +211,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.Key)
+	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.ID)
 	if err != nil {
 		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

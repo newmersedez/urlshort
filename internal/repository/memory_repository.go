@@ -8,23 +8,23 @@ import (
 )
 
 type MemoryRepository struct {
-	mu      sync.RWMutex
-	items   map[string]model.ShortenURL
+	mu    sync.RWMutex
+	items map[string]model.ShortenURL
 }
 
 func NewMemoryRepository() (*MemoryRepository, error) {
 	repo := &MemoryRepository{
-		items:   make(map[string]model.ShortenURL),
-		mu:      sync.RWMutex{},
+		items: make(map[string]model.ShortenURL),
+		mu:    sync.RWMutex{},
 	}
 	return repo, nil
 }
 
-func (r *MemoryRepository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
+func (r *MemoryRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	shortenURL, exists := r.items[key]
+	shortenURL, exists := r.items[ID]
 	if !exists {
 		return nil, nil
 	}
@@ -36,7 +36,7 @@ func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.items[shortenURL.Key] = *shortenURL
+	r.items[shortenURL.ID] = *shortenURL
 	return nil
 }
 
