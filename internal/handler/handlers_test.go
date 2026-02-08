@@ -25,12 +25,14 @@ func TestCanShortenValidURL(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 	key := "12345678"
-	shortenURL := model.NewShortenURL(key, originalURL)
 
 	logger := slog.Default()
 
 	mockRepo := mocks.NewMockRepository(t)
-	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
+	mockRepo.EXPECT().Get(t.Context(), key).Return(nil, nil).Once()
+	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
+		return s != nil && s.ID == key && s.OriginalValue == originalURL
+	})).Return(nil).Once()
 
 	mockShortener := mocks.NewMockShortener(t)
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
@@ -177,7 +179,6 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 	key := "12345678"
-	shortenURL := model.NewShortenURL(key, originalURL)
 
 	logger := slog.Default()
 
@@ -185,7 +186,10 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
 
 	mockRepo := mocks.NewMockRepository(t)
-	mockRepo.EXPECT().Add(mock.Anything, shortenURL).Return(nil).Once()
+	mockRepo.EXPECT().Get(mock.Anything, key).Return(nil, nil).Once()
+	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
+		return s != nil && s.ID == key && s.OriginalValue == originalURL
+	})).Return(nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 

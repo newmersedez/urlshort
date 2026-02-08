@@ -8,9 +8,9 @@ type ShortenURL struct {
 	CreatedAt     time.Time
 }
 
-func NewShortenURL(key, value string) *ShortenURL {
+func NewShortenURL(ID, value string) *ShortenURL {
 	return &ShortenURL{
-		ID:            key,
+		ID:            ID,
 		OriginalValue: value,
 		CreatedAt:     time.Now().UTC(),
 	}
