@@ -281,9 +281,14 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if len(requestBody) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	}
+
 	responseBody := make([]shortenBatchURLResponse, 0, len(requestBody))
 	shortenUrls := make([]*model.ShortenURL, 0, len(requestBody))
-
+	
 	for _, item := range requestBody {
 		ID, err := h.shortener.Shorten(item.OriginalUrl)
 		if err != nil {
