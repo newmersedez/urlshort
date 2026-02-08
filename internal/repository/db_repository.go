@@ -10,12 +10,12 @@ import (
 )
 
 type DBRepository struct {
-	db      *sql.DB
+	db *sql.DB
 }
 
 func NewDBRepository(db *sql.DB) (*DBRepository, error) {
 	repo := &DBRepository{
-		db:      db,
+		db: db,
 	}
 	return repo, nil
 }
@@ -24,7 +24,13 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 	row := r.db.QueryRowContext(ctx, "SELECT id, original_value, created_at FROM shorten_urls WHERE id = $1", ID)
 
 	var url model.ShortenURL
-	if err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt); err != nil {
+	err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
 		return nil, fmt.Errorf("failed to scan query result: %w", err)
 	}
 
@@ -33,17 +39,14 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	result, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (id, original_value, created_at) VALUES ($1, $2, $3)", shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
+	_, err = result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
-	}
-	if rowsAffected == 0 {
-		return errors.New("0 records were inserted into the table shorten_urls")
 	}
 
 	return nil

@@ -105,7 +105,9 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	
 	url, err := h.store.Get(ctx, id)
 
 	if err != nil {
@@ -224,9 +226,9 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context());
+	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
-	
+
 	existingURL, err := h.store.Get(ctx, ID)
 	if err != nil {
 		h.logger.Error("failed to get url from store", "error", err)

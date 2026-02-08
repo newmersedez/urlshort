@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
@@ -45,6 +48,12 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("failed to create repository instance: %w", err)
 		}
+
+		logger.Info("Starting migrations...")
+		if err = runMigrations(db); err != nil {
+			return fmt.Errorf("failed to apply migration: %w", err)
+		}
+		logger.Info("Finished migrations successfully")
 	case cfg.FileStoragePath != "":
 		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
 		if err != nil {
@@ -61,4 +70,27 @@ func run() error {
 
 	logger.Info("Starting server", "address", cfg.ServerAddr)
 	return handler.Serve(*cfg, repo, shortener, logger)
+}
+
+func runMigrations(db *sql.DB) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres", driver)
+	if err != nil {
+		return err
+	}
+
+	// Применяем все миграции
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	log.Println("Migrations applied successfully")
+	return nil
 }
