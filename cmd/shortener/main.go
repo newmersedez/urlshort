@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -52,7 +53,7 @@ func run() error {
 		}
 
 		logger.Info("Starting migrations...")
-		if err = runMigrations(db); err != nil {
+		if err = runMigrations(db, logger); err != nil {
 			return fmt.Errorf("failed to apply migration: %w", err)
 		}
 		logger.Info("Finished migrations successfully")
@@ -74,7 +75,7 @@ func run() error {
 	return handler.Serve(*cfg, repo, shortener, logger)
 }
 
-func runMigrations(db *sql.DB) error {
+func runMigrations(db *sql.DB, logger *slog.Logger) error {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return err
@@ -93,6 +94,6 @@ func runMigrations(db *sql.DB) error {
 		return err
 	}
 
-	log.Println("Migrations applied successfully")
+	logger.Info("Migrations applied successfully")
 	return nil
 }

@@ -95,6 +95,63 @@ func (_c *MockRepository_Add_Call) RunAndReturn(run func(ctx context.Context, sh
 	return _c
 }
 
+// AddBatch provides a mock function for the type MockRepository
+func (_mock *MockRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
+	ret := _mock.Called(ctx, shortenUrls)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []*model.ShortenURL) error); ok {
+		r0 = returnFunc(ctx, shortenUrls)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_AddBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddBatch'
+type MockRepository_AddBatch_Call struct {
+	*mock.Call
+}
+
+// AddBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shortenUrls []*model.ShortenURL
+func (_e *MockRepository_Expecter) AddBatch(ctx interface{}, shortenUrls interface{}) *MockRepository_AddBatch_Call {
+	return &MockRepository_AddBatch_Call{Call: _e.mock.On("AddBatch", ctx, shortenUrls)}
+}
+
+func (_c *MockRepository_AddBatch_Call) Run(run func(ctx context.Context, shortenUrls []*model.ShortenURL)) *MockRepository_AddBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []*model.ShortenURL
+		if args[1] != nil {
+			arg1 = args[1].([]*model.ShortenURL)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_AddBatch_Call) Return(err error) *MockRepository_AddBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_AddBatch_Call) RunAndReturn(run func(ctx context.Context, shortenUrls []*model.ShortenURL) error) *MockRepository_AddBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Dispose provides a mock function for the type MockRepository
 func (_mock *MockRepository) Dispose() {
 	_mock.Called()

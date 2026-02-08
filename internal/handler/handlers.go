@@ -19,8 +19,8 @@ import (
 
 type Repository interface {
 	Get(ctx context.Context, ID string) (*model.ShortenURL, error)
-	Add(ctx context.Context, shortenURL model.ShortenURL) error
-	AddBatch(ctx context.Context, shortenUrls []model.ShortenURL) error
+	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error
 	Ping(ctx context.Context) error
 	Dispose()
 }
@@ -34,8 +34,8 @@ type shortenURLRequest struct {
 }
 
 type shortenBatchURLRequest struct {
-	CorrelationId	string `json:"correlation_id"`
-	OriginalUrl		string `json:"original_url"`
+	CorrelationId string `json:"correlation_id"`
+	OriginalUrl   string `json:"original_url"`
 }
 
 type shortenURLResponse struct {
@@ -43,8 +43,8 @@ type shortenURLResponse struct {
 }
 
 type shortenBatchURLResponse struct {
-	CorrelationId	string `json:"correlation_id"`
-	ShortlUrl		string `json:"short_url"`
+	CorrelationId string `json:"correlation_id"`
+	ShortlUrl     string `json:"short_url"`
 }
 
 type handlers struct {
@@ -119,7 +119,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
-	
+
 	url, err := h.store.Get(ctx, id)
 
 	if err != nil {
@@ -184,7 +184,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	shortenURL := model.NewShortenURL(ID, request.URL)
 
-	err = h.store.Add(ctx, *shortenURL)
+	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		h.logger.Error("failed to add shorten url to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -257,7 +257,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	shortenURL := model.NewShortenURL(ID, originalURL)
 
-	err = h.store.Add(ctx, *shortenURL)
+	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		h.logger.Error("error storing URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -281,7 +281,48 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 		return
 	}
 
+	responseBody := make([]shortenBatchURLResponse, 0, len(requestBody))
+	shortenUrls := make([]*model.ShortenURL, 0, len(requestBody))
 
+	for _, item := range requestBody {
+		ID, err := h.shortener.Shorten(item.OriginalUrl)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid URL %s", item.OriginalUrl), http.StatusBadRequest)
+			return
+		}
+
+		shortenUrl, err := url.JoinPath(h.baseURL, ID)
+		if err != nil {
+			h.logger.Error("failed to get full url", "error", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		shortenUrls = append(shortenUrls, model.NewShortenURL(ID, item.OriginalUrl))
+		responseBody = append(responseBody, shortenBatchURLResponse{
+			CorrelationId: item.CorrelationId,
+			ShortlUrl:     shortenUrl,
+		})
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	err := h.store.AddBatch(ctx, shortenUrls)
+	if err != nil {
+		h.logger.Error("error storing URL", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	err = json.NewEncoder(w).Encode(responseBody)
+
+	if err != nil {
+		h.logger.Error("failed to write response body", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
