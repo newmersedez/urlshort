@@ -144,19 +144,35 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ctx := r.Context()
+	fullShortenURL, err := url.JoinPath(h.baseURL, ID)
+	if err != nil {
+		h.logger.Error("failed to get full url", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	existingURL, err := h.store.Get(ctx, ID)
+	if err != nil {
+		h.logger.Error("failed to get url from store", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	if existingURL != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(fullShortenURL))
+		return
+	}
+
 	shortenURL := model.NewShortenURL(ID, request.URL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		h.logger.Error("failed to add shorten url to the storage", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.ID)
-	if err != nil {
-		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -201,19 +217,35 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ctx := r.Context()
+	fullShortenURL, err := url.JoinPath(h.baseURL, ID)
+	if err != nil {
+		h.logger.Error("failed to get full url", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context());
+	defer cancel()
+	
+	existingURL, err := h.store.Get(ctx, ID)
+	if err != nil {
+		h.logger.Error("failed to get url from store", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	if existingURL != nil {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(fullShortenURL))
+		return
+	}
+
 	shortenURL := model.NewShortenURL(ID, originalURL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
 		h.logger.Error("error storing URL", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	fullShortenURL, err := url.JoinPath(h.baseURL, shortenURL.ID)
-	if err != nil {
-		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

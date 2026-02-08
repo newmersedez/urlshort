@@ -62,7 +62,7 @@ func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) 
 }
 
 func (r *FileRepository) Ping(ctx context.Context) error {
-	return nuk
+	return nil
 }
 
 func (r *FileRepository) Dispose() {

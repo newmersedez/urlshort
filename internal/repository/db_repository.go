@@ -21,10 +21,10 @@ func NewDBRepository(db *sql.DB) (*DBRepository, error) {
 }
 
 func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT id, original_value FROM shorten_urls WHERE id = $1", ID)
+	row := r.db.QueryRowContext(ctx, "SELECT id, original_value, created_at FROM shorten_urls WHERE id = $1", ID)
 
 	var url model.ShortenURL
-	if err := row.Scan(&url.ID, &url.OriginalValue); err != nil {
+	if err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt); err != nil {
 		return nil, fmt.Errorf("failed to scan query result: %w", err)
 	}
 
@@ -32,7 +32,7 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 }
 
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
-	result, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (id, original_url) VALUES ($1, $2)", shortenURL.ID, shortenURL.OriginalValue)
+	result, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (id, original_value, created_at) VALUES ($1, $2, $3)", shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
 	
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
