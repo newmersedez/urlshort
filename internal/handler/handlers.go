@@ -15,6 +15,7 @@ import (
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/model"
+	"github.com/newmersedez/urlshort/internal/repository"
 )
 
 type Repository interface {
@@ -168,31 +169,22 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	existingURL, err := h.store.Get(ctx, ID)
-	if err != nil {
-		h.logger.Error("failed to get url from store", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	if existingURL != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(fullShortenURL))
-		return
-	}
-
 	shortenURL := model.NewShortenURL(ID, request.URL)
+	response := shortenURLResponse{
+		Result: fullShortenURL,
+	}
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("failed to add shorten url to the storage", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		if errors.Is(err, repository.ErrUniqueViolation) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(response)
+		} else {
+			h.logger.Error("failed to add shorten url to the storage", "error", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
 		return
-	}
-
-	response := shortenURLResponse{
-		Result: fullShortenURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -241,26 +233,19 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	existingURL, err := h.store.Get(ctx, ID)
-	if err != nil {
-		h.logger.Error("failed to get url from store", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	if existingURL != nil {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(fullShortenURL))
-		return
-	}
-
 	shortenURL := model.NewShortenURL(ID, originalURL)
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		h.logger.Error("error storing URL", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		if errors.Is(err, repository.ErrUniqueViolation) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(fullShortenURL))
+		} else {
+			h.logger.Error("error storing URL", "error", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+	
 		return
 	}
 
@@ -284,6 +269,7 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 	if len(requestBody) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		return
 	}
 
 	responseBody := make([]shortenBatchURLResponse, 0, len(requestBody))

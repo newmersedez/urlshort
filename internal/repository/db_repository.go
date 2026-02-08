@@ -9,6 +9,10 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
+var (
+	ErrUniqueViolation = errors.New("record already exists")
+)
+
 type SQLStatement string
 
 type DBRepository struct {
@@ -45,16 +49,27 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	stmt, err := r.db.PrepareContext(ctx,
 		`INSERT INTO shorten_urls (id, original_value, created_at) 
-		VALUES ($1, $2, $3);`)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id) DO NOTHING;`)
+
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
 	}
 
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
+	result, err := stmt.ExecContext(ctx, shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to insert into table: %w", err)
+	}
+
+	if count == 0 {
+		return ErrUniqueViolation
 	}
 
 	return nil
