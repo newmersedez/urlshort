@@ -50,13 +50,26 @@ func (r *FileRepository) Get(ctx context.Context, ID string) (*model.ShortenURL,
 	return &shortenURL, nil
 }
 
-func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
+func (r *FileRepository) Add(ctx context.Context, shortenURL model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.items[shortenURL.ID]; !exists {
 		r.encoder.Encode(shortenURL)
-		r.items[shortenURL.ID] = *shortenURL
+		r.items[shortenURL.ID] = shortenURL
+	}
+	return nil
+}
+
+func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []model.ShortenURL) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, url := range shortenUrls {
+		if _, exists := r.items[url.ID]; !exists {
+			r.encoder.Encode(url)
+			r.items[url.ID] = url
+		}
 	}
 	return nil
 }

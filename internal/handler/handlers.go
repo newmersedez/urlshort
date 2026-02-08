@@ -19,7 +19,8 @@ import (
 
 type Repository interface {
 	Get(ctx context.Context, ID string) (*model.ShortenURL, error)
-	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	Add(ctx context.Context, shortenURL model.ShortenURL) error
+	AddBatch(ctx context.Context, shortenUrls []model.ShortenURL) error
 	Ping(ctx context.Context) error
 	Dispose()
 }
@@ -32,8 +33,18 @@ type shortenURLRequest struct {
 	URL string `json:"url"`
 }
 
+type shortenBatchURLRequest struct {
+	CorrelationId	string `json:"correlation_id"`
+	OriginalUrl		string `json:"original_url"`
+}
+
 type shortenURLResponse struct {
 	Result string `json:"result"`
+}
+
+type shortenBatchURLResponse struct {
+	CorrelationId	string `json:"correlation_id"`
+	ShortlUrl		string `json:"short_url"`
 }
 
 type handlers struct {
@@ -76,6 +87,7 @@ func newRouter(handler *handlers) *chi.Mux {
 
 	router.Post("/", handler.shortenURLViaPlainTextHandle)
 	router.Post("/api/shorten", handler.shortenURLViaJSONHandle)
+	router.Post("/api/shorten/batch", handler.shortenBatchUrlsViaJSONHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
 	router.Get("/ping", handler.pingDatabaseHandle)
 
@@ -255,6 +267,21 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fullShortenURL))
+}
+
+func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.Request) {
+	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+		return
+	}
+
+	var requestBody []shortenBatchURLRequest
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, "request body is not a valid JSON", http.StatusBadRequest)
+		return
+	}
+
+
 }
 
 func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {

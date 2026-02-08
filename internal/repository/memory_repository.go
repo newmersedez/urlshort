@@ -32,11 +32,21 @@ func (r *MemoryRepository) Get(ctx context.Context, ID string) (*model.ShortenUR
 	return &shortenURL, nil
 }
 
-func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
+func (r *MemoryRepository) Add(ctx context.Context, shortenURL model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.items[shortenURL.ID] = *shortenURL
+	r.items[shortenURL.ID] = shortenURL
+	return nil
+}
+
+func (r *MemoryRepository) AddBatch(ctx context.Context, shortenUrls []model.ShortenURL) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, url := range shortenUrls {
+		r.items[url.ID] = url
+	}
 	return nil
 }
 
