@@ -103,7 +103,6 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", key)
 
-	// Добавляем контекст в запрос
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 
@@ -305,18 +304,16 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().AddBatch(
-		mock.Anything, // context.Context
+		mock.Anything,
 		mock.MatchedBy(func(urls []*model.ShortenURL) bool {
 			if len(urls) != 2 {
 				return false
 			}
 
-			// Проверяем первый URL
 			if urls[0].ID != key1 || urls[0].OriginalValue != originalURL1 {
 				return false
 			}
 
-			// Проверяем второй URL
 			if urls[1].ID != key2 || urls[1].OriginalValue != originalURL2 {
 				return false
 			}

@@ -1,4 +1,4 @@
-package repository
+package db
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 var (
 	ErrUniqueViolation = errors.New("record already exists")
 )
-
-type SQLStatement string
 
 type DBRepository struct {
 	db *sql.DB

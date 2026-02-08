@@ -5,14 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/newmersedez/urlshort/internal/logger/config"
 )
 
-func NewLogger(cfg config.Config) (*slog.Logger, error) {
+func NewLogger(logLevel string) (*slog.Logger, error) {
 	levelVar := new(slog.LevelVar)
 
-	if err := setLogLevel(levelVar, cfg.LogLevel); err != nil {
+	if err := setLogLevel(levelVar, logLevel); err != nil {
 		return nil, fmt.Errorf("failed to set log level: %w", err)
 	}
 

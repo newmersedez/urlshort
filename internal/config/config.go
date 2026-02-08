@@ -7,15 +7,14 @@ import (
 	"path/filepath"
 
 	"github.com/caarlos0/env/v11"
-	handlersConfig "github.com/newmersedez/urlshort/internal/handler/config"
-	loggerConfig "github.com/newmersedez/urlshort/internal/logger/config"
-	storageConfig "github.com/newmersedez/urlshort/internal/repository/config"
 )
 
 type Config struct {
-	Handlers handlersConfig.Config
-	Logger   loggerConfig.Config
-	Storage  storageConfig.Config
+	ServerAddr      string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func NewConfig() (*Config, error) {
@@ -31,11 +30,11 @@ func NewConfig() (*Config, error) {
 }
 
 func parseFlags(cfg *Config) {
-	flag.StringVar(&cfg.Handlers.ServerAddr, "a", "localhost:8080", "IPv4 address of HTTP server")
-	flag.StringVar(&cfg.Handlers.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
-	flag.StringVar(&cfg.Logger.LogLevel, "l", "info", "Minimal log level")
-	flag.StringVar(&cfg.Storage.FileStoragePath, "f", filepath.Join(os.TempDir(), "storage.json"), "File storage path")
-	flag.StringVar(&cfg.Storage.DatabaseDSN, "d", "", "Database connection string")
+	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "IPv4 address of HTTP server")
+	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	flag.StringVar(&cfg.LogLevel, "l", "info", "Minimal log level")
+	flag.StringVar(&cfg.FileStoragePath, "f", filepath.Join(os.TempDir(), "storage.json"), "File storage path")
+	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database connection string")
 	flag.Parse()
 }
 

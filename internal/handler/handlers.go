@@ -12,16 +12,16 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/newmersedez/urlshort/internal/handler/config"
+	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/model"
-	"github.com/newmersedez/urlshort/internal/repository"
+	"github.com/newmersedez/urlshort/internal/repository/db"
 )
 
 type Repository interface {
 	Get(ctx context.Context, ID string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
-	AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error
+	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	Ping(ctx context.Context) error
 	Dispose()
 }
@@ -176,7 +176,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		if errors.Is(err, repository.ErrUniqueViolation) {
+		if errors.Is(err, db.ErrUniqueViolation) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			json.NewEncoder(w).Encode(response)
@@ -237,7 +237,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
-		if errors.Is(err, repository.ErrUniqueViolation) {
+		if errors.Is(err, db.ErrUniqueViolation) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(fullShortenURL))
