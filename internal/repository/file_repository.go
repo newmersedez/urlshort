@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,23 +10,21 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
-type Repository struct {
-	db      *sql.DB
+type FileRepository struct {
 	mu      sync.RWMutex
 	file    *os.File
 	encoder *json.Encoder
 	items   map[string]model.ShortenURL
 }
 
-func NewRepository(db *sql.DB, filepath string) (*Repository, error) {
+func NewFileRepository(filepath string) (*FileRepository, error) {
 	file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", filepath, err)
 	}
 
-	repo := &Repository{
-		db:      db,
+	repo := &FileRepository{
 		items:   make(map[string]model.ShortenURL),
 		mu:      sync.RWMutex{},
 		file:    file,
@@ -41,7 +38,7 @@ func NewRepository(db *sql.DB, filepath string) (*Repository, error) {
 	return repo, nil
 }
 
-func (r *Repository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
+func (r *FileRepository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -53,7 +50,7 @@ func (r *Repository) Get(ctx context.Context, key string) (*model.ShortenURL, er
 	return &shortenURL, nil
 }
 
-func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
+func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -64,7 +61,7 @@ func (r *Repository) Add(ctx context.Context, shortenURL *model.ShortenURL) erro
 	return nil
 }
 
-func (r *Repository) Ping(ctx context.Context) error {
+func (r *FileRepository) Ping(ctx context.Context) error {
 	if err := r.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping DB: %w", err)
 	}
@@ -72,11 +69,11 @@ func (r *Repository) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (r *Repository) Dispose() {
+func (r *FileRepository) Dispose() {
 	r.file.Close()
 }
 
-func (r *Repository) restoreDataFromFile() error {
+func (r *FileRepository) restoreDataFromFile() error {
 	decoder := json.NewDecoder(r.file)
 
 	line := 1
