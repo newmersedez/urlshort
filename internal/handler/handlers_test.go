@@ -304,26 +304,26 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL2).Return(key2, nil).Once()
 
 	mockRepo := mocks.NewMockRepository(t)
-  	mockRepo.EXPECT().AddBatch(
-        mock.Anything, // context.Context
-        mock.MatchedBy(func(urls []*model.ShortenURL) bool {
-            if len(urls) != 2 {
-                return false
-            }
-            
-            // Проверяем первый URL
-            if urls[0].ID != key1 || urls[0].OriginalValue != originalURL1 {
-                return false
-            }
-            
-            // Проверяем второй URL
-            if urls[1].ID != key2 || urls[1].OriginalValue != originalURL2 {
-                return false
-            }
-            
-            return true
-        }),
-    ).Return(nil).Once()
+	mockRepo.EXPECT().AddBatch(
+		mock.Anything, // context.Context
+		mock.MatchedBy(func(urls []*model.ShortenURL) bool {
+			if len(urls) != 2 {
+				return false
+			}
+
+			// Проверяем первый URL
+			if urls[0].ID != key1 || urls[0].OriginalValue != originalURL1 {
+				return false
+			}
+
+			// Проверяем второй URL
+			if urls[1].ID != key2 || urls[1].OriginalValue != originalURL2 {
+				return false
+			}
+
+			return true
+		}),
+	).Return(nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
@@ -338,8 +338,8 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 				"original_url": "%s"
 			}
 		]
-	`, 
-	originalURL1, originalURL2)))
+	`,
+		originalURL1, originalURL2)))
 	r.Header.Add("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 

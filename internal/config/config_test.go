@@ -76,7 +76,7 @@ func TestServerAddressPriority(t *testing.T) {
 
 			cfg, err := NewConfig()
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedResult, cfg.ServerAddr)
+			require.Equal(t, tt.expectedResult, cfg.Handlers.ServerAddr)
 		})
 	}
 }
@@ -133,7 +133,7 @@ func TestBaseURLPriority(t *testing.T) {
 
 			cfg, err := NewConfig()
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedResult, cfg.BaseURL)
+			require.Equal(t, tt.expectedResult, cfg.Handlers.BaseURL)
 		})
 	}
 }
@@ -190,7 +190,7 @@ func TestLogLevelPriority(t *testing.T) {
 
 			cfg, err := NewConfig()
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedResult, cfg.LogLevel)
+			require.Equal(t, tt.expectedResult, cfg.Logger.LogLevel)
 		})
 	}
 }
@@ -247,7 +247,7 @@ func TestFileStoragePathPriority(t *testing.T) {
 
 			cfg, err := NewConfig()
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedResult, cfg.FileStoragePath)
+			require.Equal(t, tt.expectedResult, cfg.Storage.FileStoragePath)
 		})
 	}
 }
@@ -308,7 +308,7 @@ func TestDatabaseDSNPriority(t *testing.T) {
 
 			cfg, err := NewConfig()
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedResult, cfg.DatabaseDSN)
+			require.Equal(t, tt.expectedResult, cfg.Storage.DatabaseDSN)
 		})
 	}
 }

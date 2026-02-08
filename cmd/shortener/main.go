@@ -29,7 +29,7 @@ func run() error {
 		return fmt.Errorf("failed to create config instance: %w", err)
 	}
 
-	logger, err := logger.NewLogger(cfg.LogLevel)
+	logger, err := logger.NewLogger(cfg.Logger)
 	if err != nil {
 		return fmt.Errorf("failed to create logger instance: %w", err)
 	}
@@ -38,8 +38,8 @@ func run() error {
 
 	var repo handler.Repository
 	switch {
-	case cfg.DatabaseDSN != "":
-		db, err := sql.Open("pgx", cfg.DatabaseDSN)
+	case cfg.Storage.DatabaseDSN != "":
+		db, err := sql.Open("pgx", cfg.Storage.DatabaseDSN)
 		if err != nil {
 			return fmt.Errorf("failed to create DB instance: %w", err)
 		}
@@ -57,8 +57,8 @@ func run() error {
 			return fmt.Errorf("failed to apply migration: %w", err)
 		}
 		logger.Info("Finished migrations successfully")
-	case cfg.FileStoragePath != "":
-		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
+	case cfg.Storage.FileStoragePath != "":
+		repo, err = repository.NewFileRepository(cfg.Storage.FileStoragePath)
 		if err != nil {
 			return fmt.Errorf("failed to create repository instance: %w", err)
 		}
@@ -71,8 +71,8 @@ func run() error {
 
 	defer repo.Dispose()
 
-	logger.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(*cfg, repo, shortener, logger)
+	logger.Info("Starting server", "address", cfg.Handlers.ServerAddr)
+	return handler.Serve(cfg.Handlers, repo, shortener, logger)
 }
 
 func runMigrations(db *sql.DB, logger *slog.Logger) error {

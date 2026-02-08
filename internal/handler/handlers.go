@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/newmersedez/urlshort/internal/config"
+	"github.com/newmersedez/urlshort/internal/handler/config"
 	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/model"
 	"github.com/newmersedez/urlshort/internal/repository"
@@ -245,7 +245,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 			h.logger.Error("error storing URL", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
-	
+
 		return
 	}
 
@@ -274,7 +274,7 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 
 	responseBody := make([]shortenBatchURLResponse, 0, len(requestBody))
 	shortenURLs := make([]*model.ShortenURL, 0, len(requestBody))
-	
+
 	for _, item := range requestBody {
 		ID, err := h.shortener.Shorten(item.OriginalURL)
 		if err != nil {
