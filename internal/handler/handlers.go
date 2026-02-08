@@ -184,7 +184,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 
 	shortenURL := model.NewShortenURL(ID, request.URL)
 
-	err = h.store.Add(ctx, shortenURL)
+	err = h.store.Add(ctx, *shortenURL)
 	if err != nil {
 		h.logger.Error("failed to add shorten url to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -257,7 +257,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 
 	shortenURL := model.NewShortenURL(ID, originalURL)
 
-	err = h.store.Add(ctx, shortenURL)
+	err = h.store.Add(ctx, *shortenURL)
 	if err != nil {
 		h.logger.Error("error storing URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

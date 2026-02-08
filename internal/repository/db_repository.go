@@ -41,7 +41,7 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 	return &url, nil
 }
 
-func (r *DBRepository) Add(ctx context.Context, shortenURL model.ShortenURL) error {
+func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	stmt, err := r.db.PrepareContext(ctx, 
 		`INSERT INTO shorten_urls (id, original_value, created_at) 
 		VALUES ($1, $2, $3);`)
@@ -59,7 +59,7 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL model.ShortenURL) err
 	return nil
 }
 
-func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []model.ShortenURL) (error) {
+func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) (error) {
 	const batchSize = 1000
 	
 	tx, err := r.db.BeginTx(ctx, nil)
