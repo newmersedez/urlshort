@@ -43,6 +43,8 @@ func run() error {
 			return fmt.Errorf("failed to create DB instance: %w", err)
 		}
 		defer db.Close()
+		db.SetMaxOpenConns(200)
+		db.SetMaxIdleConns(200)
 
 		repo, err = repository.NewDBRepository(db)
 		if err != nil {
