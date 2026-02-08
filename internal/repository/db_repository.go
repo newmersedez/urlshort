@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -30,7 +31,7 @@ func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, e
 	var url model.ShortenURL
 	err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS ix_shorten_urls_original_value ON shorten_urls(original_value);
