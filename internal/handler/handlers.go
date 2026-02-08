@@ -34,8 +34,8 @@ type shortenURLRequest struct {
 }
 
 type shortenBatchURLRequest struct {
-	CorrelationId string `json:"correlation_id"`
-	OriginalUrl   string `json:"original_url"`
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
 }
 
 type shortenURLResponse struct {
@@ -43,8 +43,8 @@ type shortenURLResponse struct {
 }
 
 type shortenBatchURLResponse struct {
-	CorrelationId string `json:"correlation_id"`
-	ShortlUrl     string `json:"short_url"`
+	CorrelationID string `json:"correlation_id"`
+	ShortlURL     string `json:"short_url"`
 }
 
 type handlers struct {
@@ -287,33 +287,33 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 	}
 
 	responseBody := make([]shortenBatchURLResponse, 0, len(requestBody))
-	shortenUrls := make([]*model.ShortenURL, 0, len(requestBody))
+	shortenURLs := make([]*model.ShortenURL, 0, len(requestBody))
 	
 	for _, item := range requestBody {
-		ID, err := h.shortener.Shorten(item.OriginalUrl)
+		ID, err := h.shortener.Shorten(item.OriginalURL)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("invalid URL %s", item.OriginalUrl), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("invalid URL %s", item.OriginalURL), http.StatusBadRequest)
 			return
 		}
 
-		shortenUrl, err := url.JoinPath(h.baseURL, ID)
+		shortenURL, err := url.JoinPath(h.baseURL, ID)
 		if err != nil {
 			h.logger.Error("failed to get full url", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		shortenUrls = append(shortenUrls, model.NewShortenURL(ID, item.OriginalUrl))
+		shortenURLs = append(shortenURLs, model.NewShortenURL(ID, item.OriginalURL))
 		responseBody = append(responseBody, shortenBatchURLResponse{
-			CorrelationId: item.CorrelationId,
-			ShortlUrl:     shortenUrl,
+			CorrelationID: item.CorrelationID,
+			ShortlURL:     shortenURL,
 		})
 	}
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	err := h.store.AddBatch(ctx, shortenUrls)
+	err := h.store.AddBatch(ctx, shortenURLs)
 	if err != nil {
 		h.logger.Error("error storing URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
