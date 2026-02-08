@@ -17,6 +17,7 @@ import (
 )
 
 type App struct {
+	DB         *sql.DB
 	cfg        *config.Config
 	logger     *slog.Logger
 	repository handler.Repository
@@ -37,11 +38,18 @@ func NewApp() (*App, error) {
 	shortener := service.NewURLShortenerService()
 
 	var repo handler.Repository
+	var db *sql.DB
+
 	switch {
 	case cfg.DatabaseDSN != "":
-		repo, err = initDatabaseRepository(cfg.DatabaseDSN, logger)
+		db, err = newDatabaseConnection(cfg.DatabaseDSN)
 		if err != nil {
-			return nil, fmt.Errorf("failed to init database repository: %w", err)
+			return nil, fmt.Errorf("failed to create DB repository: %w", err)
+		}
+
+		repo, err = repository.NewDBRepository(db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create DB repository: %w", err)
 		}
 	case cfg.FileStoragePath != "":
 		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
@@ -60,18 +68,46 @@ func NewApp() (*App, error) {
 		logger:     logger,
 		repository: repo,
 		shortener:  shortener,
+		DB:         db,
 	}, nil
 }
 
 func (a *App) Run() error {
-	defer a.repository.Dispose()
-
 	a.logger.Info("Starting server", "address", a.cfg.ServerAddr)
 	return handler.Serve(*a.cfg, a.repository, a.shortener, a.logger)
 }
 
-func initDatabaseRepository(dsn string, logger *slog.Logger) (handler.Repository, error) {
+func (a *App) Migrate() error {
+	a.logger.Info("Starting migrations...")
+
+	driver, err := postgres.WithInstance(a.DB, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres", driver)
+	if err != nil {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	a.logger.Info("Finished migrations successfully")
+	return nil
+}
+
+func (a *App) Shutdown() error {
+	return a.DB.Close()
+}
+
+func newDatabaseConnection(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DB instance: %w", err)
 	}
@@ -79,33 +115,5 @@ func initDatabaseRepository(dsn string, logger *slog.Logger) (handler.Repository
 	db.SetMaxOpenConns(200)
 	db.SetMaxIdleConns(200)
 
-	repo, err := repository.NewDBRepository(db)
-	if err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create repository: %w", err)
-	}
-
-	return repo, nil
-}
-
-func runMigrations(db *sql.DB, logger *slog.Logger) error {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		return err
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations",
-		"postgres", driver)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		return err
-	}
-
-	logger.Info("Migrations applied successfully")
-	return nil
+	return db, nil
 }

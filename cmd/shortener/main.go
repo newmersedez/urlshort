@@ -13,10 +13,16 @@ func main() {
 }
 
 func run() error {
-	application, err := app.NewApp()
+	app, err := app.NewApp()
+	defer app.Shutdown()
+
 	if err != nil {
 		return err
 	}
 
-	return application.Run()
+	if err := app.Migrate(); err != nil {
+		return err
+	}
+
+	return app.Run()
 }
