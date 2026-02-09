@@ -23,7 +23,7 @@ type Repository interface {
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	Ping(ctx context.Context) error
-	Dispose()
+	Close()
 }
 
 type Shortener interface {
@@ -306,7 +306,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(responseBody)

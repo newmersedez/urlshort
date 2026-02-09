@@ -20,11 +20,11 @@ func NewMemoryRepository() (*MemoryRepository, error) {
 	return repo, nil
 }
 
-func (r *MemoryRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
+func (r *MemoryRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	shortenURL, exists := r.items[ID]
+	shortenURL, exists := r.items[id]
 	if !exists {
 		return nil, nil
 	}
@@ -36,7 +36,7 @@ func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.items[shortenURL.ID] = *shortenURL
+	r.items[shortenURL.Id] = *shortenURL
 	return nil
 }
 
@@ -45,7 +45,7 @@ func (r *MemoryRepository) AddBatch(ctx context.Context, shortenUrls []*model.Sh
 	defer r.mu.Unlock()
 
 	for _, shortenURL := range shortenUrls {
-		r.items[shortenURL.ID] = *shortenURL
+		r.items[shortenURL.Id] = *shortenURL
 	}
 	return nil
 }
@@ -54,4 +54,4 @@ func (r *MemoryRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (r *MemoryRepository) Dispose() {}
+func (r *MemoryRepository) Close() {}

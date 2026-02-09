@@ -96,8 +96,8 @@ func (_c *MockRepository_Add_Call) RunAndReturn(run func(ctx context.Context, sh
 }
 
 // AddBatch provides a mock function for the type MockRepository
-func (_mock *MockRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
-	ret := _mock.Called(ctx, shortenUrls)
+func (_mock *MockRepository) AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error {
+	ret := _mock.Called(ctx, shortenURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddBatch")
@@ -105,7 +105,7 @@ func (_mock *MockRepository) AddBatch(ctx context.Context, shortenUrls []*model.
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, []*model.ShortenURL) error); ok {
-		r0 = returnFunc(ctx, shortenUrls)
+		r0 = returnFunc(ctx, shortenURLs)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -119,12 +119,12 @@ type MockRepository_AddBatch_Call struct {
 
 // AddBatch is a helper method to define mock.On call
 //   - ctx context.Context
-//   - shortenUrls []*model.ShortenURL
-func (_e *MockRepository_Expecter) AddBatch(ctx interface{}, shortenUrls interface{}) *MockRepository_AddBatch_Call {
-	return &MockRepository_AddBatch_Call{Call: _e.mock.On("AddBatch", ctx, shortenUrls)}
+//   - shortenURLs []*model.ShortenURL
+func (_e *MockRepository_Expecter) AddBatch(ctx interface{}, shortenURLs interface{}) *MockRepository_AddBatch_Call {
+	return &MockRepository_AddBatch_Call{Call: _e.mock.On("AddBatch", ctx, shortenURLs)}
 }
 
-func (_c *MockRepository_AddBatch_Call) Run(run func(ctx context.Context, shortenUrls []*model.ShortenURL)) *MockRepository_AddBatch_Call {
+func (_c *MockRepository_AddBatch_Call) Run(run func(ctx context.Context, shortenURLs []*model.ShortenURL)) *MockRepository_AddBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -147,47 +147,47 @@ func (_c *MockRepository_AddBatch_Call) Return(err error) *MockRepository_AddBat
 	return _c
 }
 
-func (_c *MockRepository_AddBatch_Call) RunAndReturn(run func(ctx context.Context, shortenUrls []*model.ShortenURL) error) *MockRepository_AddBatch_Call {
+func (_c *MockRepository_AddBatch_Call) RunAndReturn(run func(ctx context.Context, shortenURLs []*model.ShortenURL) error) *MockRepository_AddBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Dispose provides a mock function for the type MockRepository
-func (_mock *MockRepository) Dispose() {
+// Close provides a mock function for the type MockRepository
+func (_mock *MockRepository) Close() {
 	_mock.Called()
 	return
 }
 
-// MockRepository_Dispose_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Dispose'
-type MockRepository_Dispose_Call struct {
+// MockRepository_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
+type MockRepository_Close_Call struct {
 	*mock.Call
 }
 
-// Dispose is a helper method to define mock.On call
-func (_e *MockRepository_Expecter) Dispose() *MockRepository_Dispose_Call {
-	return &MockRepository_Dispose_Call{Call: _e.mock.On("Dispose")}
+// Close is a helper method to define mock.On call
+func (_e *MockRepository_Expecter) Close() *MockRepository_Close_Call {
+	return &MockRepository_Close_Call{Call: _e.mock.On("Close")}
 }
 
-func (_c *MockRepository_Dispose_Call) Run(run func()) *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) Run(run func()) *MockRepository_Close_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockRepository_Dispose_Call) Return() *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) Return() *MockRepository_Close_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *MockRepository_Dispose_Call) RunAndReturn(run func()) *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) RunAndReturn(run func()) *MockRepository_Close_Call {
 	_c.Run(run)
 	return _c
 }
 
 // Get provides a mock function for the type MockRepository
-func (_mock *MockRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
-	ret := _mock.Called(ctx, ID)
+func (_mock *MockRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -196,17 +196,17 @@ func (_mock *MockRepository) Get(ctx context.Context, ID string) (*model.Shorten
 	var r0 *model.ShortenURL
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*model.ShortenURL, error)); ok {
-		return returnFunc(ctx, ID)
+		return returnFunc(ctx, id)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *model.ShortenURL); ok {
-		r0 = returnFunc(ctx, ID)
+		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.ShortenURL)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, ID)
+		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -220,12 +220,12 @@ type MockRepository_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ID string
-func (_e *MockRepository_Expecter) Get(ctx interface{}, ID interface{}) *MockRepository_Get_Call {
-	return &MockRepository_Get_Call{Call: _e.mock.On("Get", ctx, ID)}
+//   - id string
+func (_e *MockRepository_Expecter) Get(ctx interface{}, id interface{}) *MockRepository_Get_Call {
+	return &MockRepository_Get_Call{Call: _e.mock.On("Get", ctx, id)}
 }
 
-func (_c *MockRepository_Get_Call) Run(run func(ctx context.Context, ID string)) *MockRepository_Get_Call {
+func (_c *MockRepository_Get_Call) Run(run func(ctx context.Context, id string)) *MockRepository_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -248,7 +248,7 @@ func (_c *MockRepository_Get_Call) Return(shortenURL *model.ShortenURL, err erro
 	return _c
 }
 
-func (_c *MockRepository_Get_Call) RunAndReturn(run func(ctx context.Context, ID string) (*model.ShortenURL, error)) *MockRepository_Get_Call {
+func (_c *MockRepository_Get_Call) RunAndReturn(run func(ctx context.Context, id string) (*model.ShortenURL, error)) *MockRepository_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }

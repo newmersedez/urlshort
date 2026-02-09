@@ -25,14 +25,14 @@ func NewDBRepository(db *sql.DB) (*DBRepository, error) {
 	return repo, nil
 }
 
-func (r *DBRepository) Get(ctx context.Context, ID string) (*model.ShortenURL, error) {
+func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, original_value, created_at 
 		FROM shorten_urls WHERE id = $1`,
-		ID)
+		id)
 
 	var url model.ShortenURL
-	err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt)
+	err := row.Scan(&url.Id, &url.OriginalValue, &url.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -57,7 +57,7 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 
 	defer stmt.Close()
 
-	result, err := stmt.ExecContext(ctx, shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
+	result, err := stmt.ExecContext(ctx, shortenURL.Id, shortenURL.OriginalValue, shortenURL.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
 	}
@@ -76,17 +76,17 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 
 func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	valueStrings := make([]string, 0, len(shortenUrls))
-    valueArgs := make([]interface{}, 0, len(shortenUrls) * 3)
-    for _, url := range shortenUrls {
-        valueStrings = append(valueStrings, "($1, $2, $3)")
-        valueArgs = append(valueArgs, url.ID)
-        valueArgs = append(valueArgs, url.OriginalValue)
-        valueArgs = append(valueArgs, url.CreatedAt)
-    }
+	valueArgs := make([]interface{}, 0, len(shortenUrls)*3)
+	for _, url := range shortenUrls {
+		valueStrings = append(valueStrings, "($1, $2, $3)")
+		valueArgs = append(valueArgs, url.Id)
+		valueArgs = append(valueArgs, url.OriginalValue)
+		valueArgs = append(valueArgs, url.CreatedAt)
+	}
 
-    stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
-    _, err := r.db.ExecContext(ctx, stmt, valueArgs...)
-    
+	stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
+	_, err := r.db.ExecContext(ctx, stmt, valueArgs...)
+
 	if err != nil {
 		return fmt.Errorf("failed to insert into table: %w", err)
 	}
@@ -102,4 +102,4 @@ func (r *DBRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (r *DBRepository) Dispose() {}
+func (r *DBRepository) Close() {}

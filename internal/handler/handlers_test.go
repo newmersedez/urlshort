@@ -30,7 +30,7 @@ func TestCanShortenValidURL(t *testing.T) {
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
-		return s != nil && s.ID == key && s.OriginalValue == originalURL
+		return s != nil && s.Id == key && s.OriginalValue == originalURL
 	})).Return(nil).Once()
 
 	mockShortener := mocks.NewMockShortener(t)
@@ -185,7 +185,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
-		return s != nil && s.ID == key && s.OriginalValue == originalURL
+		return s != nil && s.Id == key && s.OriginalValue == originalURL
 	})).Return(nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
@@ -310,11 +310,11 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 				return false
 			}
 
-			if urls[0].ID != key1 || urls[0].OriginalValue != originalURL1 {
+			if urls[0].Id != key1 || urls[0].OriginalValue != originalURL1 {
 				return false
 			}
 
-			if urls[1].ID != key2 || urls[1].OriginalValue != originalURL2 {
+			if urls[1].Id != key2 || urls[1].OriginalValue != originalURL2 {
 				return false
 			}
 
@@ -358,6 +358,6 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, response, 2)
 	require.Contains(t, res.Header.Get("Content-Type"), "application/json")
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "1", ShortlURL: "http://localhost:8080/123"})
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "2", ShortlURL: "http://localhost:8080/456"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationId: "1", ShortlURL: "http://localhost:8080/123"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationId: "2", ShortlURL: "http://localhost:8080/456"})
 }

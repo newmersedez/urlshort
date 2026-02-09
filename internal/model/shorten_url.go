@@ -3,14 +3,14 @@ package model
 import "time"
 
 type ShortenURL struct {
-	ID            string
+	Id            string
 	OriginalValue string
 	CreatedAt     time.Time
 }
 
-func NewShortenURL(ID, value string) *ShortenURL {
+func NewShortenURL(id, value string) *ShortenURL {
 	return &ShortenURL{
-		ID:            ID,
+		Id:            id,
 		OriginalValue: value,
 		CreatedAt:     time.Now().UTC(),
 	}

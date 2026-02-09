@@ -83,6 +83,8 @@ func (a *App) Run() error {
 }
 
 func (a *App) Shutdown() error {
+	a.repository.Close()
+
 	if a.db != nil {
 		return a.db.Close()
 	}
@@ -132,4 +134,3 @@ func runMigrations(db *sql.DB, logger *slog.Logger) error {
 	logger.Info("Finished migrations successfully")
 	return nil
 }
-
