@@ -46,7 +46,7 @@ type compressReader struct {
 func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+		return nil, fmt.Errorf("failed to initialize gzip reader object: %w", err)
 	}
 
 	return &compressReader{
@@ -61,7 +61,7 @@ func (c *compressReader) Read(p []byte) (n int, err error) {
 
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
-		return fmt.Errorf("failed to close compress reader: %w", err)
+		return fmt.Errorf("failed to close compress reader object: %w", err)
 	}
 
 	return c.gz.Close()
@@ -82,7 +82,7 @@ func RequestCompressorMiddleware(logger *slog.Logger) func(next http.Handler) ht
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 				cr, err := newCompressReader(r.Body)
 				if err != nil {
-					logger.Error("failed to create gzip reader", "error", err)
+					logger.Error("failed to initialize gzip reader object", "error", err)
 					ow.WriteHeader(http.StatusInternalServerError)
 					return
 				}

@@ -28,12 +28,12 @@ type App struct {
 func NewApp() (*App, error) {
 	cfg, err := config.NewConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create config: %w", err)
+		return nil, fmt.Errorf("failed to initialize config object: %w", err)
 	}
 
 	logger, err := logger.NewLogger(cfg.LogLevel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create logger: %w", err)
+		return nil, fmt.Errorf("failed to initialize logger object: %w", err)
 	}
 
 	shortener := service.NewURLShortenerService()
@@ -45,12 +45,12 @@ func NewApp() (*App, error) {
 	case cfg.DatabaseDSN != "":
 		db, err = newDatabaseConnection(cfg.DatabaseDSN)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create DB repository: %w", err)
+			return nil, fmt.Errorf("failed to initialize database connection object: %w", err)
 		}
 
 		repo, err = repository.NewDBRepository(db)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create DB repository: %w", err)
+			return nil, fmt.Errorf("failed to initialize db repository object: %w", err)
 		}
 
 		if err := runMigrations(db, logger); err != nil {
@@ -59,12 +59,12 @@ func NewApp() (*App, error) {
 	case cfg.FileStoragePath != "":
 		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create file repository: %w", err)
+			return nil, fmt.Errorf("failed to initialize file repository object: %w", err)
 		}
 	default:
 		repo, err = repository.NewMemoryRepository()
 		if err != nil {
-			return nil, fmt.Errorf("failed to create memory repository: %w", err)
+			return nil, fmt.Errorf("failed to initialize in-memory repository object: %w", err)
 		}
 	}
 
@@ -107,7 +107,7 @@ func newDatabaseConnection(dsn string) (*sql.DB, error) {
 
 func runMigrations(db *sql.DB, logger *slog.Logger) error {
 	if db == nil {
-		logger.Info("No migrations were applied, skipping...")
+		logger.Info("no migrations were applied, skipping...")
 		return nil
 	}
 
@@ -115,22 +115,22 @@ func runMigrations(db *sql.DB, logger *slog.Logger) error {
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		return fmt.Errorf("failed to migrate: %w", err)
+		return fmt.Errorf("failed to initialize db driver object: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations",
 		"postgres", driver)
 	if err != nil {
-		return fmt.Errorf("failed to migrate: %w", err)
+		return fmt.Errorf("failed to initialize migrate object: %w", err)
 	}
 
 	err = m.Up()
 
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("failed to migrate: %w", err)
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
-	logger.Info("Finished migrations successfully")
+	logger.Info("finished migrations successfully")
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrUniqueViolation = errors.New("record already exists")
+	ErrUniqueViolation = errors.New("record violates unique constraint")
 )
 
 type DBRepository struct {
@@ -52,19 +52,19 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 		ON CONFLICT (id) DO NOTHING`)
 
 	if err != nil {
-		return fmt.Errorf("failed to insert into table: %w", err)
+		return fmt.Errorf("failed to prepare SQL statement: %w", err)
 	}
 
 	defer stmt.Close()
 
 	result, err := stmt.ExecContext(ctx, shortenURL.Id, shortenURL.OriginalValue, shortenURL.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("failed to insert into table: %w", err)
+		return fmt.Errorf("failed to execute SQL statement: %w", err)
 	}
 
 	count, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("failed to insert into table: %w", err)
+		return fmt.Errorf("failed to determine affected rows: %w", err)
 	}
 
 	if count == 0 {
@@ -75,10 +75,19 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 }
 
 func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
+	if len(shortenUrls) == 0 {
+		return nil
+	}
+
+	const argumentsCount = 3
+
 	valueStrings := make([]string, 0, len(shortenUrls))
-	valueArgs := make([]interface{}, 0, len(shortenUrls)*3)
-	for _, url := range shortenUrls {
-		valueStrings = append(valueStrings, "($1, $2, $3)")
+	valueArgs := make([]any, 0, argumentsCount * len(shortenUrls))
+	
+	for i, url := range shortenUrls {
+		values := fmt.Sprintf("($%d, $%d, $%d)", i * argumentsCount + 1, i * argumentsCount + 2, i * argumentsCount + 3)
+        valueStrings = append(valueStrings, values)
+
 		valueArgs = append(valueArgs, url.Id)
 		valueArgs = append(valueArgs, url.OriginalValue)
 		valueArgs = append(valueArgs, url.CreatedAt)
@@ -88,7 +97,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 	_, err := r.db.ExecContext(ctx, stmt, valueArgs...)
 
 	if err != nil {
-		return fmt.Errorf("failed to insert into table: %w", err)
+		return fmt.Errorf("failed to execute SQL stetement: %w", err)
 	}
 
 	return nil
@@ -96,7 +105,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 
 func (r *DBRepository) Ping(ctx context.Context) error {
 	if err := r.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping DB: %w", err)
+		return fmt.Errorf("failed to check DB availability: %w", err)
 	}
 
 	return nil

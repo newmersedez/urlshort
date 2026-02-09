@@ -24,17 +24,17 @@ func TestCanShortenValidURL(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
-	key := "12345678"
+	id := "12345678"
 
 	logger := slog.Default()
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
-		return s != nil && s.Id == key && s.OriginalValue == originalURL
+		return s != nil && s.Id == id && s.OriginalValue == originalURL
 	})).Return(nil).Once()
 
 	mockShortener := mocks.NewMockShortener(t)
-	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
+	mockShortener.EXPECT().Shorten(originalURL).Return(id, nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
@@ -86,22 +86,22 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 func TestCanGetFullURLByShortenValue(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
-	key := "12345678"
+	id := "12345678"
 	originalURL := "https://stackoverflow.com"
-	shortenURL := model.NewShortenURL(key, originalURL)
+	shortenURL := model.NewShortenURL(id, originalURL)
 
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
 
 	mockRepo := mocks.NewMockRepository(t)
-	mockRepo.EXPECT().Get(mock.Anything, key).Return(shortenURL, nil).Once()
+	mockRepo.EXPECT().Get(mock.Anything, id).Return(shortenURL, nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", key)
+	rctx.URLParams.Add("id", id)
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
@@ -144,20 +144,20 @@ func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
-	key := "12345678"
+	id := "12345678"
 
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
 
 	mockRepo := mocks.NewMockRepository(t)
-	mockRepo.EXPECT().Get(mock.Anything, key).Return(nil, nil).Once()
+	mockRepo.EXPECT().Get(mock.Anything, id).Return(nil, nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", key)
+	rctx.URLParams.Add("id", id)
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
@@ -176,16 +176,16 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
-	key := "12345678"
+	id := "12345678"
 
 	logger := slog.Default()
 
 	mockShortener := mocks.NewMockShortener(t)
-	mockShortener.EXPECT().Shorten(originalURL).Return(key, nil).Once()
+	mockShortener.EXPECT().Shorten(originalURL).Return(id, nil).Once()
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().Add(mock.Anything, mock.MatchedBy(func(s *model.ShortenURL) bool {
-		return s != nil && s.Id == key && s.OriginalValue == originalURL
+		return s != nil && s.Id == id && s.OriginalValue == originalURL
 	})).Return(nil).Once()
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger)
@@ -293,14 +293,14 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL1 := "https://stackoverflow1.com"
 	originalURL2 := "https://stackoverflow2.com"
-	key1 := "123"
-	key2 := "456"
+	id1 := "123"
+	id2 := "456"
 
 	logger := slog.Default()
 
 	mockShortener := mocks.NewMockShortener(t)
-	mockShortener.EXPECT().Shorten(originalURL1).Return(key1, nil).Once()
-	mockShortener.EXPECT().Shorten(originalURL2).Return(key2, nil).Once()
+	mockShortener.EXPECT().Shorten(originalURL1).Return(id1, nil).Once()
+	mockShortener.EXPECT().Shorten(originalURL2).Return(id2, nil).Once()
 
 	mockRepo := mocks.NewMockRepository(t)
 	mockRepo.EXPECT().AddBatch(
@@ -310,11 +310,11 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 				return false
 			}
 
-			if urls[0].Id != key1 || urls[0].OriginalValue != originalURL1 {
+			if urls[0].Id != id1 || urls[0].OriginalValue != originalURL1 {
 				return false
 			}
 
-			if urls[1].Id != key2 || urls[1].OriginalValue != originalURL2 {
+			if urls[1].Id != id2 || urls[1].OriginalValue != originalURL2 {
 				return false
 			}
 

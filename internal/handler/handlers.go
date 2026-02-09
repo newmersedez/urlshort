@@ -58,12 +58,12 @@ type handlers struct {
 func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger) error {
 	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create handlers: %w", err)
+		return fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
 
 	server, err := newServer(cfg.ServerAddr, newRouter(handler))
 	if err != nil {
-		return fmt.Errorf("failed to create handlers: %w", err)
+		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
 	return server.ListenAndServe()
@@ -124,7 +124,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	url, err := h.store.Get(ctx, id)
 
 	if err != nil {
-		h.logger.Error("error retrieving URL", "error", err)
+		h.logger.Error("error retrieving URL from repository", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -161,7 +161,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, id)
 	if err != nil {
-		h.logger.Error("failed to get full url", "error", err)
+		h.logger.Error("failed to build shorten URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -183,7 +183,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		h.logger.Error("failed to add shorten url to the storage", "error", err)
+		h.logger.Error("failed to save shorten URL to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -226,7 +226,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	fullShortenURL, err := url.JoinPath(h.baseURL, id)
 	if err != nil {
-		h.logger.Error("failed to get full url", "error", err)
+		h.logger.Error("failed to build full shorten URL", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -245,7 +245,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.logger.Error("error storing URL", "error", err)
+		h.logger.Error("failed to save shorten URL to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -285,7 +285,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 
 		shortenURL, err := url.JoinPath(h.baseURL, id)
 		if err != nil {
-			h.logger.Error("failed to get full url", "error", err)
+			h.logger.Error("failed to build full shorten URL", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -302,7 +302,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 
 	err := h.store.AddBatch(ctx, shortenURLs)
 	if err != nil {
-		h.logger.Error("error storing URL", "error", err)
+		h.logger.Error("failed to save shorten URLs to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -325,6 +325,7 @@ func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
 	if err := h.store.Ping(ctx); err != nil {
 		h.logger.Error("failed to connect to the database", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
