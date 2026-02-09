@@ -47,7 +47,6 @@ func NewApp() (*App, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize database connection object: %w", err)
 		}
-
 		if err := runMigrations(db, logger); err != nil {
 			return nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
