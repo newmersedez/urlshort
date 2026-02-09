@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -22,7 +21,7 @@ type (
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
-	return size, fmt.Errorf("failed to write HTTP response: %w", err)
+	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
