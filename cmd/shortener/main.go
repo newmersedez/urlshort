@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/newmersedez/urlshort/internal/app"
@@ -14,14 +15,9 @@ func main() {
 
 func run() error {
 	app, err := app.NewApp()
-	defer app.Shutdown()
 
 	if err != nil {
-		return err
-	}
-
-	if err := app.Migrate(); err != nil {
-		return err
+		return fmt.Errorf("failed to initiailze the application object: %w", err)
 	}
 
 	return app.Run()

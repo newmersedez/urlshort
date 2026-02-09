@@ -19,7 +19,7 @@ import (
 )
 
 type Repository interface {
-	Get(ctx context.Context, ID string) (*model.ShortenURL, error)
+	Get(ctx context.Context, id string) (*model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	Ping(ctx context.Context) error
@@ -35,7 +35,7 @@ type shortenURLRequest struct {
 }
 
 type shortenBatchURLRequest struct {
-	CorrelationID string `json:"correlation_id"`
+	CorrelationId string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 
@@ -44,7 +44,7 @@ type shortenURLResponse struct {
 }
 
 type shortenBatchURLResponse struct {
-	CorrelationID string `json:"correlation_id"`
+	CorrelationId string `json:"correlation_id"`
 	ShortlURL     string `json:"short_url"`
 }
 
@@ -86,9 +86,9 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Use(middleware.RequestLoggerMiddleware(handler.logger))
 	router.Use(middleware.RequestCompressorMiddleware(handler.logger))
 
-	router.Post("/", handler.shortenURLViaPlainTextHandle)
-	router.Post("/api/shorten", handler.shortenURLViaJSONHandle)
-	router.Post("/api/shorten/batch", handler.shortenBatchUrlsViaJSONHandle)
+	router.Post("/", handler.shortenURLHandle)
+	router.Post("/api/shorten", handler.enhancedShortenURLHandle)
+	router.Post("/api/shorten/batch", handler.shortenBatchURLsHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
 	router.Get("/ping", handler.pingDatabaseHandle)
 
@@ -118,7 +118,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 	defer cancel()
 
 	url, err := h.store.Get(ctx, id)
@@ -136,7 +136,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
-func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
@@ -153,26 +153,26 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ID, err := h.shortener.Shorten(request.URL)
+	id, err := h.shortener.Shorten(request.URL)
 	if err != nil {
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, ID)
+	fullShortenURL, err := url.JoinPath(h.baseURL, id)
 	if err != nil {
 		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	shortenURL := model.NewShortenURL(ID, request.URL)
+	shortenURL := model.NewShortenURL(id, request.URL)
 	response := shortenURLResponse{
 		Result: fullShortenURL,
 	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+	defer cancel()
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
@@ -180,10 +180,11 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			json.NewEncoder(w).Encode(response)
-		} else {
-			h.logger.Error("failed to add shorten url to the storage", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
+
+		h.logger.Error("failed to add shorten url to the storage", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -198,7 +199,7 @@ func (h *handlers) shortenURLViaJSONHandle(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "text/plain" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
@@ -217,23 +218,23 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ID, err := h.shortener.Shorten(originalURL)
+	id, err := h.shortener.Shorten(originalURL)
 	if err != nil {
 		http.Error(w, "failed to shorten URL", http.StatusBadRequest)
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, ID)
+	fullShortenURL, err := url.JoinPath(h.baseURL, id)
 	if err != nil {
 		h.logger.Error("failed to get full url", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
+	shortenURL := model.NewShortenURL(id, originalURL)
 
-	shortenURL := model.NewShortenURL(ID, originalURL)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+	defer cancel()
 
 	err = h.store.Add(ctx, shortenURL)
 	if err != nil {
@@ -241,11 +242,11 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(fullShortenURL))
-		} else {
-			h.logger.Error("error storing URL", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 
+		h.logger.Error("error storing URL", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -254,7 +255,7 @@ func (h *handlers) shortenURLViaPlainTextHandle(w http.ResponseWriter, r *http.R
 	w.Write([]byte(fullShortenURL))
 }
 
-func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 		return
@@ -276,27 +277,27 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 	shortenURLs := make([]*model.ShortenURL, 0, len(requestBody))
 
 	for _, item := range requestBody {
-		ID, err := h.shortener.Shorten(item.OriginalURL)
+		id, err := h.shortener.Shorten(item.OriginalURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("invalid URL %s", item.OriginalURL), http.StatusBadRequest)
 			return
 		}
 
-		shortenURL, err := url.JoinPath(h.baseURL, ID)
+		shortenURL, err := url.JoinPath(h.baseURL, id)
 		if err != nil {
 			h.logger.Error("failed to get full url", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		shortenURLs = append(shortenURLs, model.NewShortenURL(ID, item.OriginalURL))
+		shortenURLs = append(shortenURLs, model.NewShortenURL(id, item.OriginalURL))
 		responseBody = append(responseBody, shortenBatchURLResponse{
-			CorrelationID: item.CorrelationID,
+			CorrelationId: item.CorrelationId,
 			ShortlURL:     shortenURL,
 		})
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 	defer cancel()
 
 	err := h.store.AddBatch(ctx, shortenURLs)
@@ -305,6 +306,7 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+	
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(responseBody)
@@ -317,7 +319,7 @@ func (h *handlers) shortenBatchUrlsViaJSONHandle(w http.ResponseWriter, r *http.
 }
 
 func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 	defer cancel()
 
 	if err := h.store.Ping(ctx); err != nil {

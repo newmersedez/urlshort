@@ -1,1 +1,0 @@
-DROP INDEX NOT EXISTS ix_shorten_urls_original_value;

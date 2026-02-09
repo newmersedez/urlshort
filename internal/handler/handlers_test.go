@@ -43,7 +43,7 @@ func TestCanShortenValidURL(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaPlainTextHandle(w, request)
+	h.shortenURLHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -75,7 +75,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaPlainTextHandle(w, request)
+	h.shortenURLHandle(w, request)
 
 	//Assert
 	res := w.Result()
@@ -195,7 +195,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaJSONHandle(w, r)
+	h.enhancedShortenURLHandle(w, r)
 
 	//Assert
 	res := w.Result()
@@ -230,7 +230,7 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaJSONHandle(w, r)
+	h.enhancedShortenURLHandle(w, r)
 
 	//Assert
 	res := w.Result()
@@ -254,7 +254,7 @@ func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaJSONHandle(w, r)
+	h.enhancedShortenURLHandle(w, r)
 
 	//Assert
 	res := w.Result()
@@ -280,7 +280,7 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenURLViaJSONHandle(w, r)
+	h.enhancedShortenURLHandle(w, r)
 
 	//Assert
 	res := w.Result()
@@ -341,7 +341,7 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Act
-	h.shortenBatchUrlsViaJSONHandle(w, r)
+	h.shortenBatchURLsHandle(w, r)
 
 	//Assert
 	res := w.Result()

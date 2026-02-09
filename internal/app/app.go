@@ -2,6 +2,7 @@ package app
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -51,6 +52,10 @@ func NewApp() (*App, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create DB repository: %w", err)
 		}
+
+		if err := runMigrations(db, logger); err != nil {
+			return nil, fmt.Errorf("failed to run migrations: %w", err)
+		}
 	case cfg.FileStoragePath != "":
 		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
 		if err != nil {
@@ -77,35 +82,6 @@ func (a *App) Run() error {
 	return handler.Serve(*a.cfg, a.repository, a.shortener, a.logger)
 }
 
-func (a *App) Migrate() error {
-	if a.db == nil {
-		a.logger.Info("No migrations were applied, skipping...")
-		return nil
-	}
-
-	a.logger.Info("Starting migrations...")
-
-	driver, err := postgres.WithInstance(a.db, &postgres.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to migrate: %w", err)
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations",
-		"postgres", driver)
-	if err != nil {
-		return fmt.Errorf("failed to migrate: %w", err)
-	}
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to migrate: %w", err)
-	}
-
-	a.logger.Info("Finished migrations successfully")
-	return nil
-}
-
 func (a *App) Shutdown() error {
 	if a.db != nil {
 		return a.db.Close()
@@ -126,3 +102,34 @@ func newDatabaseConnection(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
+
+func runMigrations(db *sql.DB, logger *slog.Logger) error {
+	if db == nil {
+		logger.Info("No migrations were applied, skipping...")
+		return nil
+	}
+
+	logger.Info("Starting migrations...")
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres", driver)
+	if err != nil {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	err = m.Up()
+
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	logger.Info("Finished migrations successfully")
+	return nil
+}
+

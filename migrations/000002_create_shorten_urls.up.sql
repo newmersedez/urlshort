@@ -1,5 +1,7 @@
 CREATE TABLE shorten_urls (
-    id              TEXT PRIMARY KEY,
-    original_value  TEXT NOT NULL,
+    id              VARCHAR(8) PRIMARY KEY,
+    original_value  VARCHAR(2048) NOT NULL,
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_shorten_urls_original_value ON shorten_urls(original_value);
