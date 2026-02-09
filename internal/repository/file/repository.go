@@ -54,9 +54,9 @@ func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.items[shortenURL.Id]; !exists {
+	if _, exists := r.items[shortenURL.ID]; !exists {
 		r.encoder.Encode(shortenURL)
-		r.items[shortenURL.Id] = *shortenURL
+		r.items[shortenURL.ID] = *shortenURL
 	}
 	return nil
 }
@@ -66,9 +66,9 @@ func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shor
 	defer r.mu.Unlock()
 
 	for _, shortenURL := range shortenUrls {
-		if _, exists := r.items[shortenURL.Id]; !exists {
+		if _, exists := r.items[shortenURL.ID]; !exists {
 			r.encoder.Encode(shortenURL)
-			r.items[shortenURL.Id] = *shortenURL
+			r.items[shortenURL.ID] = *shortenURL
 		}
 	}
 	return nil
@@ -91,8 +91,8 @@ func (r *FileRepository) restoreDataFromFile() error {
 		if err := decoder.Decode(&url); err != nil {
 			return fmt.Errorf("failed to restore url at line %d: %w", line, err)
 		}
-		if _, exists := r.items[url.Id]; !exists {
-			r.items[url.Id] = url
+		if _, exists := r.items[url.ID]; !exists {
+			r.items[url.ID] = url
 		}
 		line++
 	}

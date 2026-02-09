@@ -32,7 +32,7 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 		id)
 
 	var url model.ShortenURL
-	err := row.Scan(&url.Id, &url.OriginalValue, &url.CreatedAt)
+	err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -57,7 +57,7 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 
 	defer stmt.Close()
 
-	result, err := stmt.ExecContext(ctx, shortenURL.Id, shortenURL.OriginalValue, shortenURL.CreatedAt)
+	result, err := stmt.ExecContext(ctx, shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to execute SQL statement: %w", err)
 	}
@@ -82,13 +82,13 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 	const argumentsCount = 3
 
 	valueStrings := make([]string, 0, len(shortenUrls))
-	valueArgs := make([]any, 0, argumentsCount * len(shortenUrls))
-	
-	for i, url := range shortenUrls {
-		values := fmt.Sprintf("($%d, $%d, $%d)", i * argumentsCount + 1, i * argumentsCount + 2, i * argumentsCount + 3)
-        valueStrings = append(valueStrings, values)
+	valueArgs := make([]any, 0, argumentsCount*len(shortenUrls))
 
-		valueArgs = append(valueArgs, url.Id)
+	for i, url := range shortenUrls {
+		values := fmt.Sprintf("($%d, $%d, $%d)", i*argumentsCount+1, i*argumentsCount+2, i*argumentsCount+3)
+		valueStrings = append(valueStrings, values)
+
+		valueArgs = append(valueArgs, url.ID)
 		valueArgs = append(valueArgs, url.OriginalValue)
 		valueArgs = append(valueArgs, url.CreatedAt)
 	}

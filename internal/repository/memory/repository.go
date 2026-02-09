@@ -36,7 +36,7 @@ func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.items[shortenURL.Id] = *shortenURL
+	r.items[shortenURL.ID] = *shortenURL
 	return nil
 }
 
@@ -45,7 +45,7 @@ func (r *MemoryRepository) AddBatch(ctx context.Context, shortenUrls []*model.Sh
 	defer r.mu.Unlock()
 
 	for _, shortenURL := range shortenUrls {
-		r.items[shortenURL.Id] = *shortenURL
+		r.items[shortenURL.ID] = *shortenURL
 	}
 	return nil
 }
