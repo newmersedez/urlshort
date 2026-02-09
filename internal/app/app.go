@@ -48,13 +48,13 @@ func NewApp() (*App, error) {
 			return nil, fmt.Errorf("failed to initialize database connection object: %w", err)
 		}
 
+		if err := runMigrations(db, logger); err != nil {
+			return nil, fmt.Errorf("failed to run migrations: %w", err)
+		}
+
 		repo, err = repository.NewDBRepository(db)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize db repository object: %w", err)
-		}
-
-		if err := runMigrations(db, logger); err != nil {
-			return nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
 	case cfg.FileStoragePath != "":
 		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
