@@ -118,10 +118,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-	defer cancel()
-
-	url, err := h.store.Get(ctx, id)
+	url, err := h.store.Get(r.Context(), id)
 
 	if err != nil {
 		h.logger.Error("error retrieving URL from repository", "error", err)
@@ -171,10 +168,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		Result: fullShortenURL,
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-	defer cancel()
-
-	err = h.store.Add(ctx, shortenURL)
+	err = h.store.Add(r.Context(), shortenURL)
 	if err != nil {
 		if errors.Is(err, db.ErrUniqueViolation) {
 			w.Header().Set("Content-Type", "application/json")
@@ -233,10 +227,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 
 	shortenURL := model.NewShortenURL(id, originalURL)
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-	defer cancel()
-
-	err = h.store.Add(ctx, shortenURL)
+	err = h.store.Add(r.Context(), shortenURL)
 	if err != nil {
 		if errors.Is(err, db.ErrUniqueViolation) {
 			w.Header().Set("Content-Type", "text/plain")
@@ -297,10 +288,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 		})
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-	defer cancel()
-
-	err := h.store.AddBatch(ctx, shortenURLs)
+	err := h.store.AddBatch(r.Context(), shortenURLs)
 	if err != nil {
 		h.logger.Error("failed to save shorten URLs to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
