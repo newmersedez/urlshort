@@ -44,7 +44,7 @@ type shortenURLResponse struct {
 }
 
 type shortenBatchURLResponse struct {
-	CorrelationId string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 	ShortlURL     string `json:"short_url"`
 }
 
@@ -292,7 +292,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 
 		shortenURLs = append(shortenURLs, model.NewShortenURL(id, item.OriginalURL))
 		responseBody = append(responseBody, shortenBatchURLResponse{
-			CorrelationId: item.CorrelationID,
+			CorrelationID: item.CorrelationID,
 			ShortlURL:     shortenURL,
 		})
 	}
