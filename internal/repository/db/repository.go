@@ -15,10 +15,15 @@ var (
 )
 
 type DBRepository struct {
-	db *sql.DB
+	db *DB
 }
 
-func NewDBRepository(db *sql.DB) (*DBRepository, error) {
+func NewDBRepository(dsn string) (*DBRepository, error) {
+	db, err := newDatabaseConnection(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize DB repository object: %w", err)
+	}
+
 	repo := &DBRepository{
 		db: db,
 	}
@@ -26,7 +31,7 @@ func NewDBRepository(db *sql.DB) (*DBRepository, error) {
 }
 
 func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
-	row := r.db.QueryRowContext(ctx,
+	row := r.db.pool.QueryRowContext(ctx,
 		`SELECT id, original_value, created_at 
 		FROM shorten_urls WHERE id = $1`,
 		id)
@@ -46,7 +51,7 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 }
 
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
-	stmt, err := r.db.PrepareContext(ctx,
+	stmt, err := r.db.pool.PrepareContext(ctx,
 		`INSERT INTO shorten_urls (id, original_value, created_at) 
 		VALUES ($1, $2, $3)
 		ON CONFLICT (id) DO NOTHING`)
@@ -94,7 +99,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 	}
 
 	stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
-	_, err := r.db.ExecContext(ctx, stmt, valueArgs...)
+	_, err := r.db.pool.ExecContext(ctx, stmt, valueArgs...)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute SQL stetement: %w", err)
@@ -104,7 +109,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 }
 
 func (r *DBRepository) Ping(ctx context.Context) error {
-	if err := r.db.PingContext(ctx); err != nil {
+	if err := r.db.pool.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to check DB availability: %w", err)
 	}
 

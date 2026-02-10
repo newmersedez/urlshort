@@ -358,6 +358,6 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, response, 2)
 	require.Contains(t, res.Header.Get("Content-Type"), "application/json")
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "1", ShortlURL: "http://localhost:8080/123"})
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "2", ShortlURL: "http://localhost:8080/456"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationId: "1", ShortlURL: "http://localhost:8080/123"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationId: "2", ShortlURL: "http://localhost:8080/456"})
 }
