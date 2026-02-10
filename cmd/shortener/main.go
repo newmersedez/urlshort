@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -34,7 +35,7 @@ func run() error {
 
 	switch {
 	case cfg.DatabaseDSN != "":
-		repo, err = repository.NewDBRepository(cfg.DatabaseDSN)
+		repo, err = repository.NewDBRepository(context.Background(), cfg.DatabaseDSN, log)
 		if err != nil {
 			return fmt.Errorf("failed to initialize db repository object: %w", err)
 		}

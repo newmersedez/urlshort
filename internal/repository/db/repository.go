@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -18,8 +19,8 @@ type DBRepository struct {
 	db *DB
 }
 
-func NewDBRepository(dsn string) (*DBRepository, error) {
-	db, err := newDatabaseConnection(dsn)
+func NewDBRepository(ctx context.Context, dsn string, logger *slog.Logger) (*DBRepository, error) {
+	db, err := newDB(ctx, dsn, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize DB repository object: %w", err)
 	}
@@ -31,7 +32,8 @@ func NewDBRepository(dsn string) (*DBRepository, error) {
 }
 
 func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
-	row := r.db.pool.QueryRowContext(ctx,
+	row := r.db.pool.QueryRow(
+		ctx,
 		`SELECT id, original_value, created_at 
 		FROM shorten_urls WHERE id = $1`,
 		id)
@@ -51,28 +53,22 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 }
 
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
-	stmt, err := r.db.pool.PrepareContext(ctx,
+	tag, err := r.db.pool.Exec(
+		ctx,
 		`INSERT INTO shorten_urls (id, original_value, created_at) 
 		VALUES ($1, $2, $3)
-		ON CONFLICT (id) DO NOTHING`)
+		ON CONFLICT (id) DO NOTHING`,
+		shortenURL.ID,
+		shortenURL.OriginalValue,
+		shortenURL.CreatedAt,
+	)
 
 	if err != nil {
 		return fmt.Errorf("failed to prepare SQL statement: %w", err)
 	}
 
-	defer stmt.Close()
-
-	result, err := stmt.ExecContext(ctx, shortenURL.ID, shortenURL.OriginalValue, shortenURL.CreatedAt)
-	if err != nil {
-		return fmt.Errorf("failed to execute SQL statement: %w", err)
-	}
-
-	count, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to determine affected rows: %w", err)
-	}
-
-	if count == 0 {
+	rowsAffectedCount := tag.RowsAffected()
+	if rowsAffectedCount != 1 {
 		return ErrUniqueViolation
 	}
 
@@ -99,7 +95,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 	}
 
 	stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
-	_, err := r.db.pool.ExecContext(ctx, stmt, valueArgs...)
+	_, err := r.db.pool.Exec(ctx, stmt, valueArgs...)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute SQL stetement: %w", err)
@@ -109,7 +105,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 }
 
 func (r *DBRepository) Ping(ctx context.Context) error {
-	if err := r.db.pool.PingContext(ctx); err != nil {
+	if err := r.db.pool.Ping(ctx); err != nil {
 		return fmt.Errorf("failed to check DB availability: %w", err)
 	}
 
