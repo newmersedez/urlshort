@@ -75,6 +75,27 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 	return nil
 }
 
+func (r *DBRepository) AddUser(ctx context.Context, user *model.User) error {
+	tag, err := r.db.pool.Exec(
+		ctx,
+		`INSERT INTO users (id)
+		VALUES ($1)
+		ON CONFLICT (id) DO NOTHING`,
+		user.ID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("faile to insert into table users: %w", err)
+	}
+
+	rowsAffectedCount := tag.RowsAffected()
+	if rowsAffectedCount != 1 {
+		return ErrUniqueViolation
+	}
+
+	return nil
+}
+
 func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	if len(shortenUrls) == 0 {
 		return nil
