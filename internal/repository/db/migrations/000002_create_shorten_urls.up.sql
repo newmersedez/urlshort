@@ -1,5 +1,5 @@
 CREATE TABLE shorten_urls (
-    id              VARCHAR(8) PRIMARY KEY,
+    id              VARCHAR(256) PRIMARY KEY,
     original_value  VARCHAR(2048) NOT NULL,
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL
 );

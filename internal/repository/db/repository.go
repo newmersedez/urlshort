@@ -113,7 +113,5 @@ func (r *DBRepository) Ping(ctx context.Context) error {
 }
 
 func (r *DBRepository) Close() {
-	if r.db != nil {
-		r.db.pool.Close()
-	}
+	r.db.pool.Close()
 }
