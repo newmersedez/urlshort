@@ -95,42 +95,99 @@ func (_c *MockRepository_Add_Call) RunAndReturn(run func(ctx context.Context, sh
 	return _c
 }
 
-// Dispose provides a mock function for the type MockRepository
-func (_mock *MockRepository) Dispose() {
+// AddBatch provides a mock function for the type MockRepository
+func (_mock *MockRepository) AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error {
+	ret := _mock.Called(ctx, shortenURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []*model.ShortenURL) error); ok {
+		r0 = returnFunc(ctx, shortenURLs)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_AddBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddBatch'
+type MockRepository_AddBatch_Call struct {
+	*mock.Call
+}
+
+// AddBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shortenURLs []*model.ShortenURL
+func (_e *MockRepository_Expecter) AddBatch(ctx interface{}, shortenURLs interface{}) *MockRepository_AddBatch_Call {
+	return &MockRepository_AddBatch_Call{Call: _e.mock.On("AddBatch", ctx, shortenURLs)}
+}
+
+func (_c *MockRepository_AddBatch_Call) Run(run func(ctx context.Context, shortenURLs []*model.ShortenURL)) *MockRepository_AddBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []*model.ShortenURL
+		if args[1] != nil {
+			arg1 = args[1].([]*model.ShortenURL)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_AddBatch_Call) Return(err error) *MockRepository_AddBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_AddBatch_Call) RunAndReturn(run func(ctx context.Context, shortenURLs []*model.ShortenURL) error) *MockRepository_AddBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Close provides a mock function for the type MockRepository
+func (_mock *MockRepository) Close() {
 	_mock.Called()
 	return
 }
 
-// MockRepository_Dispose_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Dispose'
-type MockRepository_Dispose_Call struct {
+// MockRepository_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
+type MockRepository_Close_Call struct {
 	*mock.Call
 }
 
-// Dispose is a helper method to define mock.On call
-func (_e *MockRepository_Expecter) Dispose() *MockRepository_Dispose_Call {
-	return &MockRepository_Dispose_Call{Call: _e.mock.On("Dispose")}
+// Close is a helper method to define mock.On call
+func (_e *MockRepository_Expecter) Close() *MockRepository_Close_Call {
+	return &MockRepository_Close_Call{Call: _e.mock.On("Close")}
 }
 
-func (_c *MockRepository_Dispose_Call) Run(run func()) *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) Run(run func()) *MockRepository_Close_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockRepository_Dispose_Call) Return() *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) Return() *MockRepository_Close_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *MockRepository_Dispose_Call) RunAndReturn(run func()) *MockRepository_Dispose_Call {
+func (_c *MockRepository_Close_Call) RunAndReturn(run func()) *MockRepository_Close_Call {
 	_c.Run(run)
 	return _c
 }
 
 // Get provides a mock function for the type MockRepository
-func (_mock *MockRepository) Get(ctx context.Context, key string) (*model.ShortenURL, error) {
-	ret := _mock.Called(ctx, key)
+func (_mock *MockRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -139,17 +196,17 @@ func (_mock *MockRepository) Get(ctx context.Context, key string) (*model.Shorte
 	var r0 *model.ShortenURL
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*model.ShortenURL, error)); ok {
-		return returnFunc(ctx, key)
+		return returnFunc(ctx, id)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *model.ShortenURL); ok {
-		r0 = returnFunc(ctx, key)
+		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.ShortenURL)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, key)
+		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -163,12 +220,12 @@ type MockRepository_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
-//   - key string
-func (_e *MockRepository_Expecter) Get(ctx interface{}, key interface{}) *MockRepository_Get_Call {
-	return &MockRepository_Get_Call{Call: _e.mock.On("Get", ctx, key)}
+//   - id string
+func (_e *MockRepository_Expecter) Get(ctx interface{}, id interface{}) *MockRepository_Get_Call {
+	return &MockRepository_Get_Call{Call: _e.mock.On("Get", ctx, id)}
 }
 
-func (_c *MockRepository_Get_Call) Run(run func(ctx context.Context, key string)) *MockRepository_Get_Call {
+func (_c *MockRepository_Get_Call) Run(run func(ctx context.Context, id string)) *MockRepository_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -191,7 +248,58 @@ func (_c *MockRepository_Get_Call) Return(shortenURL *model.ShortenURL, err erro
 	return _c
 }
 
-func (_c *MockRepository_Get_Call) RunAndReturn(run func(ctx context.Context, key string) (*model.ShortenURL, error)) *MockRepository_Get_Call {
+func (_c *MockRepository_Get_Call) RunAndReturn(run func(ctx context.Context, id string) (*model.ShortenURL, error)) *MockRepository_Get_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Ping provides a mock function for the type MockRepository
+func (_mock *MockRepository) Ping(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Ping")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_Ping_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Ping'
+type MockRepository_Ping_Call struct {
+	*mock.Call
+}
+
+// Ping is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockRepository_Expecter) Ping(ctx interface{}) *MockRepository_Ping_Call {
+	return &MockRepository_Ping_Call{Call: _e.mock.On("Ping", ctx)}
+}
+
+func (_c *MockRepository_Ping_Call) Run(run func(ctx context.Context)) *MockRepository_Ping_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_Ping_Call) Return(err error) *MockRepository_Ping_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_Ping_Call) RunAndReturn(run func(ctx context.Context) error) *MockRepository_Ping_Call {
 	_c.Call.Return(run)
 	return _c
 }

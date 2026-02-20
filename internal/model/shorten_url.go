@@ -1,13 +1,17 @@
 package model
 
+import "time"
+
 type ShortenURL struct {
-	Key  string
-	Value string
+	ID            string
+	OriginalValue string
+	CreatedAt     time.Time
 }
 
-func NewShortenURL(key, value string) *ShortenURL {
+func NewShortenURL(id, value string) *ShortenURL {
 	return &ShortenURL{
-		Key:  key,
-		Value: value,
+		ID:            id,
+		OriginalValue: value,
+		CreatedAt:     time.Now().UTC(),
 	}
 }

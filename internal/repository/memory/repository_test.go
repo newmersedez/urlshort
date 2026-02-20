@@ -1,8 +1,6 @@
-package repository
+package memory
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/newmersedez/urlshort/internal/model"
@@ -11,18 +9,14 @@ import (
 
 func TestNewRepository(t *testing.T) {
 	// Arrange
-	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
 	// Act
-	repository, err := NewRepository(fileStoragePath)
+	repository, err := NewMemoryRepository()
 
 	// Assert
 	require.NoError(t, err)
 	require.NotNil(t, repository.items)
-	require.NotNil(t, repository.encoder)
-	require.NotNil(t, repository.file)
 
-	_, err = os.Stat(fileStoragePath)
 	require.NoError(t, err)
 }
 
@@ -31,10 +25,8 @@ func TestAdd(t *testing.T) {
 	key := "key"
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
-	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
-	repository, _ := NewRepository(fileStoragePath)
-	defer os.Remove(fileStoragePath)
+	repository, _ := NewMemoryRepository()
 
 	// Act
 	repository.Add(t.Context(), shortenURL)
@@ -42,20 +34,16 @@ func TestAdd(t *testing.T) {
 	// Assert
 	val, ok := repository.items[key]
 	require.True(t, ok)
-	require.Equal(t, value, val.Value)
+	require.Equal(t, value, val.OriginalValue)
 }
-
 
 func TestGet(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
 	shortenURL := model.NewShortenURL(key, value)
-	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
-	repository, _ := NewRepository(fileStoragePath)
-	defer os.Remove(fileStoragePath)
-
+	repository, _ := NewMemoryRepository()
 	repository.Add(t.Context(), shortenURL)
 
 	// Act
@@ -63,5 +51,5 @@ func TestGet(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, shortenURL.Value, val.Value)
+	require.Equal(t, shortenURL, val)
 }

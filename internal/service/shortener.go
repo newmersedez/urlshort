@@ -3,9 +3,9 @@ package service
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	urltools "net/url"
 )
-
 
 type Shortener struct{}
 
@@ -15,7 +15,7 @@ func NewURLShortenerService() *Shortener {
 
 func (s *Shortener) Shorten(url string) (string, error) {
 	if _, err := urltools.ParseRequestURI(url); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to shorten URL %s: %w", url, err)
 	}
 
 	hash := md5.Sum([]byte(url))

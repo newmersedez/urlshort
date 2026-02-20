@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -20,22 +21,38 @@ func main() {
 func run() error {
 	cfg, err := config.NewConfig()
 	if err != nil {
-		return fmt.Errorf("failed to create config instance: %w", err)
+		return fmt.Errorf("failed to initialize config object: %w", err)
 	}
 
-	logger, err := logger.NewLogger(cfg.LogLevel)
+	log, err := logger.NewLogger(cfg.LogLevel)
 	if err != nil {
-		return fmt.Errorf("failed to create logger instance: %w", err)
+		return fmt.Errorf("failed to initialize logger object: %w", err)
 	}
-
-	repository, err := repository.NewRepository(cfg.FileStoragePath)
-	if err != nil {
-		return fmt.Errorf("failed to create repository instance: %w", err)
-	}
-	defer repository.Dispose()
 
 	shortener := service.NewURLShortenerService()
 
-	logger.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(*cfg, repository, shortener, logger)
+	var repo handler.Repository
+
+	switch {
+	case cfg.DatabaseDSN != "":
+		repo, err = repository.NewDBRepository(context.Background(), cfg.DatabaseDSN, log)
+		if err != nil {
+			return fmt.Errorf("failed to initialize db repository object: %w", err)
+		}
+	case cfg.FileStoragePath != "":
+		repo, err = repository.NewFileRepository(cfg.FileStoragePath)
+		if err != nil {
+			return fmt.Errorf("failed to initialize file repository object: %w", err)
+		}
+	default:
+		repo, err = repository.NewMemoryRepository()
+		if err != nil {
+			return fmt.Errorf("failed to initialize in-memory repository object: %w", err)
+		}
+	}
+
+	defer repo.Close()
+
+	log.Info("Starting server", "address", cfg.ServerAddr)
+	return handler.Serve(*cfg, repo, shortener, log)
 }
