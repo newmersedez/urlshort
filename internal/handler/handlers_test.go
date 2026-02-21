@@ -27,6 +27,7 @@ func TestCanShortenValidURL(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 	id := "12345678"
+	userID := uuid.New()
 
 	logger := slog.Default()
 
@@ -39,12 +40,13 @@ func TestCanShortenValidURL(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL).Return(id, nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
-	tokenService.EXPECT().GetUserId(mock.Anything).Return(uuid.New(), nil)
-
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
+
+	ctx := context.WithValue(request.Context(), "userID", userID)
+	request = request.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -66,6 +68,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	originalURL := "url//string"
+	userID := uuid.New()
 
 	logger := slog.Default()
 	mockRepo := mocks.NewMockRepository(t)
@@ -76,9 +79,11 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	tokenService := middlewareMocks.NewMockTokenService(t)
 
 	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
-	
+
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
+	ctx := context.WithValue(request.Context(), "userID", userID)
+	request = request.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -191,6 +196,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
 	id := "12345678"
+	userID := uuid.New()
 
 	logger := slog.Default()
 
@@ -208,6 +214,8 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
+	ctx := context.WithValue(r.Context(), "userID", userID)
+	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -234,11 +242,11 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	originalURL := "https://stackoverflow.com"
+	userID := uuid.New()
 
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
 	mockRepo := mocks.NewMockRepository(t)
-
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
 
@@ -246,6 +254,8 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`"url": "%s"`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
+	ctx := context.WithValue(r.Context(), "userID", userID)
+	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -287,6 +297,7 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	originalURL := "url//string"
+	userID := uuid.New()
 
 	mockRepo := mocks.NewMockRepository(t)
 	logger := slog.Default()
@@ -300,6 +311,8 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
+	ctx := context.WithValue(r.Context(), "userID", userID)
+	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -318,6 +331,7 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	originalURL2 := "https://stackoverflow2.com"
 	id1 := "123"
 	id2 := "456"
+	userID := uuid.New()
 
 	logger := slog.Default()
 
@@ -363,6 +377,8 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	`,
 		originalURL1, originalURL2)))
 	r.Header.Add("Content-Type", "application/json")
+	ctx := context.WithValue(r.Context(), "userID", userID)
+	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	// Act
