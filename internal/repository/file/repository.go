@@ -55,8 +55,12 @@ func (r *FileRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	shortenURLs := make([]model.ShortenURL, len(r.items))
+	shortenURLs := make([]model.ShortenURL, 0, len(r.items))
 	for _, value := range r.items {
+		if value.UserID != userID {
+			continue
+		}
+
 		shortenURLs = append(shortenURLs, value)
 	}
 

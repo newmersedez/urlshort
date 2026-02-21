@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/newmersedez/urlshort/internal/model"
 )
 
 type TokenService interface {
@@ -36,10 +35,9 @@ func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) fun
 			var userID uuid.UUID
 
 			if cookie == nil {
-				user := model.NewUser()
-				userID = user.ID
+				userID = uuid.New()
 
-				token, err := tokenService.GetToken(user.ID)
+				token, err := tokenService.GetToken(userID)
 				if err != nil {
 					logger.Error("failed to generate token", "error", err)
 					w.WriteHeader(http.StatusInternalServerError)

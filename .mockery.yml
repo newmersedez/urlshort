@@ -9,3 +9,11 @@ packages:
         interfaces:
             Shortener:
             Repository:
+    github.com/newmersedez/urlshort/internal/middleware:
+        config:
+            dir: "{{.InterfaceDir}}/mocks"
+            filename: "mock_{{.InterfaceName | snakecase}}.go"
+            pkgname: "mocks"
+            structname: "Mock{{.InterfaceName}}"
+        interfaces:
+            TokenService:
