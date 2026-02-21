@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
@@ -34,12 +35,12 @@ func NewDBRepository(ctx context.Context, dsn string, logger *slog.Logger) (*DBR
 func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	row := r.db.pool.QueryRow(
 		ctx,
-		`SELECT id, original_value, created_at 
+		`SELECT id, user_id, original_value, created_at 
 		FROM shorten_urls WHERE id = $1`,
 		id)
 
 	var url model.ShortenURL
-	err := row.Scan(&url.ID, &url.OriginalValue, &url.CreatedAt)
+	err := row.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -52,13 +53,46 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 	return &url, nil
 }
 
+func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
+	shortenURLs := make([]model.ShortenURL, 1)
+
+	rows, err := r.db.pool.Query(
+		ctx,
+		`SELECT id, user_id, original_value, created_at 
+		FROM shorten_urls WHERE user_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute SQL statement: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var url model.ShortenURL
+		err = rows.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan query result: %w", err)
+		}
+
+		shortenURLs = append(shortenURLs, url)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute SQL statement: %w", err)
+	}
+	return shortenURLs, nil
+}
+
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	tag, err := r.db.pool.Exec(
 		ctx,
-		`INSERT INTO shorten_urls (id, original_value, created_at) 
-		VALUES ($1, $2, $3)
+		`INSERT INTO shorten_urls (id, user_id, original_value, created_at) 
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (id) DO NOTHING`,
 		shortenURL.ID,
+		shortenURL.UserID,
 		shortenURL.OriginalValue,
 		shortenURL.CreatedAt,
 	)
@@ -75,47 +109,27 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 	return nil
 }
 
-func (r *DBRepository) AddUser(ctx context.Context, user *model.User) error {
-	tag, err := r.db.pool.Exec(
-		ctx,
-		`INSERT INTO users (id)
-		VALUES ($1)
-		ON CONFLICT (id) DO NOTHING`,
-		user.ID,
-	)
-
-	if err != nil {
-		return fmt.Errorf("faile to insert into table users: %w", err)
-	}
-
-	rowsAffectedCount := tag.RowsAffected()
-	if rowsAffectedCount != 1 {
-		return ErrUniqueViolation
-	}
-
-	return nil
-}
-
 func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	if len(shortenUrls) == 0 {
 		return nil
 	}
 
-	const argumentsCount = 3
+	const argumentsCount = 4
 
 	valueStrings := make([]string, 0, len(shortenUrls))
 	valueArgs := make([]any, 0, argumentsCount*len(shortenUrls))
 
 	for i, url := range shortenUrls {
-		values := fmt.Sprintf("($%d, $%d, $%d)", i*argumentsCount+1, i*argumentsCount+2, i*argumentsCount+3)
+		values := fmt.Sprintf("($%d, $%d, $%d, $%d)", i*argumentsCount+1, i*argumentsCount+2, i*argumentsCount+3, i*argumentsCount+4)
 		valueStrings = append(valueStrings, values)
 
 		valueArgs = append(valueArgs, url.ID)
+		valueArgs = append(valueArgs, url.UserID)
 		valueArgs = append(valueArgs, url.OriginalValue)
 		valueArgs = append(valueArgs, url.CreatedAt)
 	}
 
-	stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
+	stmt := fmt.Sprintf("INSERT INTO shorten_urls (id, user_id, original_value, created_at) VALUES %s", strings.Join(valueStrings, ","))
 	_, err := r.db.pool.Exec(ctx, stmt, valueArgs...)
 
 	if err != nil {

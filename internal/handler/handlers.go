@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/middleware"
 	"github.com/newmersedez/urlshort/internal/model"
@@ -20,6 +21,7 @@ import (
 
 type Repository interface {
 	Get(ctx context.Context, id string) (*model.ShortenURL, error)
+	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	Ping(ctx context.Context) error
@@ -28,6 +30,12 @@ type Repository interface {
 
 type Shortener interface {
 	Shorten(url string) (string, error)
+}
+
+type TokenService interface {
+	IsValid(token string) bool
+	GetToken(userID uuid.UUID) (string, error)
+	GetUserId(token string) (uuid.UUID, error)
 }
 
 type shortenURLRequest struct {
@@ -45,18 +53,24 @@ type shortenURLResponse struct {
 
 type shortenBatchURLResponse struct {
 	CorrelationID string `json:"correlation_id"`
-	ShortlURL     string `json:"short_url"`
+	ShortURL      string `json:"short_url"`
+}
+
+type urlListResponse struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
 }
 
 type handlers struct {
-	baseURL   string
-	store     Repository
-	shortener Shortener
-	logger    *slog.Logger
+	baseURL      string
+	store        Repository
+	shortener    Shortener
+	tokenService TokenService
+	logger       *slog.Logger
 }
 
-func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger) error {
-	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger)
+func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger, tokenService TokenService) error {
+	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger, tokenService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
@@ -69,12 +83,13 @@ func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slo
 	return server.ListenAndServe()
 }
 
-func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger) (*handlers, error) {
+func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger, tokenService TokenService) (*handlers, error) {
 	handlers := &handlers{
-		baseURL:   baseURL,
-		store:     store,
-		shortener: shortener,
-		logger:    logger,
+		baseURL:      baseURL,
+		store:        store,
+		shortener:    shortener,
+		logger:       logger,
+		tokenService: tokenService,
 	}
 
 	return handlers, nil
@@ -85,10 +100,12 @@ func newRouter(handler *handlers) *chi.Mux {
 
 	router.Use(middleware.RequestLoggerMiddleware(handler.logger))
 	router.Use(middleware.RequestCompressorMiddleware(handler.logger))
+	router.Use(middleware.AuthorizationMiddleware(handler.tokenService, handler.logger))
 
 	router.Post("/", handler.shortenURLHandle)
 	router.Post("/api/shorten", handler.enhancedShortenURLHandle)
 	router.Post("/api/shorten/batch", handler.shortenBatchURLsHandle)
+	router.Get("/api/user/urls", handler.GetURLsHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
 	router.Get("/ping", handler.pingDatabaseHandle)
 
@@ -133,9 +150,73 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
+func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
+	userIDValue := r.Context().Value("userID")
+	if userIDValue == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := userIDValue.(uuid.UUID)
+	if !ok || userID == uuid.Nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.store.GetList(r.Context(), userID)
+
+	if err != nil {
+		h.logger.Error("error retrieving URL from repository", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	responseBody := make([]urlListResponse, len(urls))
+
+	for _, item := range urls {
+		shortURL, err := url.JoinPath(h.baseURL, item.ID)
+		if err != nil {
+			h.logger.Error("failed to build full shorten URL", "error", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		responseBody = append(responseBody, urlListResponse{
+			ShortURL:    shortURL,
+			OriginalURL: item.OriginalValue,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	
+	if len(responseBody) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	if json.NewEncoder(w).Encode(responseBody); err != nil {
+		h.logger.Error("failed to write response body", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+		return
+	}
+
+	userIDValue := r.Context().Value("userID")
+	if userIDValue == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := userIDValue.(uuid.UUID)
+	if !ok || userID == uuid.Nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -163,7 +244,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	shortenURL := model.NewShortenURL(id, request.URL)
+	shortenURL := model.NewShortenURL(userID, id, request.URL)
 	response := shortenURLResponse{
 		Result: fullShortenURL,
 	}
@@ -199,6 +280,18 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userIDValue := r.Context().Value("userID")
+	if userIDValue == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := userIDValue.(uuid.UUID)
+	if !ok || userID == uuid.Nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "request body is not a valid plain text", http.StatusBadRequest)
@@ -225,7 +318,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortenURL := model.NewShortenURL(id, originalURL)
+	shortenURL := model.NewShortenURL(userID, id, originalURL)
 
 	err = h.store.Add(r.Context(), shortenURL)
 	if err != nil {
@@ -249,6 +342,18 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request) {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+		return
+	}
+
+	userIDValue := r.Context().Value("userID")
+	if userIDValue == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := userIDValue.(uuid.UUID)
+	if !ok || userID == uuid.Nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -281,10 +386,10 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		shortenURLs = append(shortenURLs, model.NewShortenURL(id, item.OriginalURL))
+		shortenURLs = append(shortenURLs, model.NewShortenURL(userID, id, item.OriginalURL))
 		responseBody = append(responseBody, shortenBatchURLResponse{
 			CorrelationID: item.CorrelationID,
-			ShortlURL:     shortenURL,
+			ShortURL:      shortenURL,
 		})
 	}
 

@@ -1,18 +1,22 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type ShortenURL struct {
 	ID            string
-	UserID		  string
+	UserID        uuid.UUID
 	OriginalValue string
 	CreatedAt     time.Time
 }
 
-func NewShortenURL(userID, id, value string) *ShortenURL {
+func NewShortenURL(userID uuid.UUID, id, value string) *ShortenURL {
 	return &ShortenURL{
 		ID:            id,
-		UserID: 	   userID,
+		UserID:        userID,
 		OriginalValue: value,
 		CreatedAt:     time.Now().UTC(),
 	}

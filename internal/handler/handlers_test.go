@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/handler/mocks"
 	"github.com/newmersedez/urlshort/internal/model"
 	"github.com/stretchr/testify/assert"
@@ -87,8 +88,9 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	// Arrange
 	baseURL := "http://localhost:8080"
 	id := "12345678"
+	userID := uuid.New()
 	originalURL := "https://stackoverflow.com"
-	shortenURL := model.NewShortenURL(id, originalURL)
+	shortenURL := model.NewShortenURL(userID, id, originalURL)
 
 	logger := slog.Default()
 	mockShortener := mocks.NewMockShortener(t)
@@ -358,6 +360,6 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, response, 2)
 	require.Contains(t, res.Header.Get("Content-Type"), "application/json")
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "1", ShortlURL: "http://localhost:8080/123"})
-	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "2", ShortlURL: "http://localhost:8080/456"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "1", ShortURL: "http://localhost:8080/123"})
+	require.Contains(t, response, shortenBatchURLResponse{CorrelationID: "2", ShortURL: "http://localhost:8080/456"})
 }

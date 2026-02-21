@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
@@ -30,6 +31,18 @@ func (r *MemoryRepository) Get(ctx context.Context, id string) (*model.ShortenUR
 	}
 
 	return &shortenURL, nil
+}
+
+func (r *MemoryRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	shortenURLs := make([]model.ShortenURL, len(r.items))
+	for _, value := range r.items {
+		shortenURLs = append(shortenURLs, value)
+	}
+
+	return shortenURLs, nil
 }
 
 func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
