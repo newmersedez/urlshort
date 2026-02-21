@@ -50,7 +50,6 @@ func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) fun
 					Name:     authCookieName,
 					Value:    token,
 					HttpOnly: true,
-					Secure:   true,
 					Path:     "/",
 				}
 			} else {

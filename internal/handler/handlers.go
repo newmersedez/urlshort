@@ -171,7 +171,7 @@ func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseBody := make([]urlListResponse, len(urls))
+	responseBody := make([]urlListResponse, 0, len(urls))
 
 	for _, item := range urls {
 		shortURL, err := url.JoinPath(h.baseURL, item.ID)
@@ -188,7 +188,7 @@ func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	if len(responseBody) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 	} else {

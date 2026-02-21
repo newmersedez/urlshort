@@ -9,18 +9,20 @@ import (
 
 	"github.com/google/uuid"
 )
+// 32 byte key
+const secretKey = "27e655be04ff08f42dde5ecae167ac65d3c8e53e61afac06e607ad9fd4598bff"
 
 type TokenService struct {
 	aesgcm cipher.AEAD
 }
 
 func NewTokenService() (*TokenService, error) {
-	key, err := generateRandom(2 * aes.BlockSize)
+	keyBytes, err := hex.DecodeString(secretKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key: %w", err)
 	}
 
-	aesblock, err := aes.NewCipher(key)
+	aesblock, err := aes.NewCipher(keyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}

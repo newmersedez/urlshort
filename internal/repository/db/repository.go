@@ -54,7 +54,7 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 }
 
 func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
-	shortenURLs := make([]model.ShortenURL, 1)
+	shortenURLs := make([]model.ShortenURL, 0)
 
 	rows, err := r.db.pool.Query(
 		ctx,
