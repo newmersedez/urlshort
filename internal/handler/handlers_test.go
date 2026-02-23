@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/handler/mocks"
+	"github.com/newmersedez/urlshort/internal/middleware"
 	middlewareMocks "github.com/newmersedez/urlshort/internal/middleware/mocks"
 	"github.com/newmersedez/urlshort/internal/model"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestCanShortenValidURL(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
 
-	ctx := context.WithValue(request.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	request = request.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -82,7 +83,7 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
-	ctx := context.WithValue(request.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	request = request.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -214,7 +215,7 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
-	ctx := context.WithValue(r.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -254,7 +255,7 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`"url": "%s"`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
-	ctx := context.WithValue(r.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -311,7 +312,7 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
-	ctx := context.WithValue(r.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -377,7 +378,7 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	`,
 		originalURL1, originalURL2)))
 	r.Header.Add("Content-Type", "application/json")
-	ctx := context.WithValue(r.Context(), "userID", userID)
+	ctx := middleware.SetUserID(t.Context(), userID)
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 

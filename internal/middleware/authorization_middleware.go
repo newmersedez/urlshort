@@ -27,6 +27,10 @@ func GetUserID(ctx context.Context) (uuid.UUID, bool) {
 	return userID, ok
 }
 
+func SetUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, contextKeyUserID, userID)
+}
+
 func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
