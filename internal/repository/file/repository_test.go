@@ -52,8 +52,8 @@ func TestGet(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
-	userId := uuid.New()
-	shortenURL := model.NewShortenURL(userId, key, value)
+	userID := uuid.New()
+	shortenURL := model.NewShortenURL(userID, key, value)
 	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
 	repository, _ := NewFileRepository(fileStoragePath)
