@@ -15,11 +15,21 @@ type TokenService interface {
 	GetUserID(token string) (uuid.UUID, error)
 }
 
+type contextKey string
+
+const (
+	authCookieName              = "token"
+	contextKeyUserID contextKey = "userID"
+)
+
+func GetUserID(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(contextKeyUserID).(uuid.UUID)
+	return userID, ok
+}
+
 func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			const authCookieName = "token"
-			const contextKeyUserID = "userID"
 
 			cookie, err := r.Cookie(authCookieName)
 			if err != nil {

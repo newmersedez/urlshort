@@ -151,13 +151,7 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
-	userIDValue := r.Context().Value("userID")
-	if userIDValue == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	userID, ok := userIDValue.(uuid.UUID)
+	userID, ok := middleware.GetUserID(r.Context())
 	if !ok || userID == uuid.Nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
@@ -208,13 +202,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userIDValue := r.Context().Value("userID")
-	if userIDValue == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	userID, ok := userIDValue.(uuid.UUID)
+	userID, ok := middleware.GetUserID(r.Context())
 	if !ok || userID == uuid.Nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
@@ -280,13 +268,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIDValue := r.Context().Value("userID")
-	if userIDValue == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	userID, ok := userIDValue.(uuid.UUID)
+	userID, ok := middleware.GetUserID(r.Context())
 	if !ok || userID == uuid.Nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
@@ -345,13 +327,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userIDValue := r.Context().Value("userID")
-	if userIDValue == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	userID, ok := userIDValue.(uuid.UUID)
+	userID, ok := middleware.GetUserID(r.Context())
 	if !ok || userID == uuid.Nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
