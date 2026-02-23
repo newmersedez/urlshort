@@ -96,12 +96,12 @@ func (_c *MockTokenService_GetToken_Call) RunAndReturn(run func(userID uuid.UUID
 	return _c
 }
 
-// GetUserId provides a mock function for the type MockTokenService
-func (_mock *MockTokenService) GetUserId(token string) (uuid.UUID, error) {
+// GetUserID provides a mock function for the type MockTokenService
+func (_mock *MockTokenService) GetUserID(token string) (uuid.UUID, error) {
 	ret := _mock.Called(token)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetUserId")
+		panic("no return value specified for GetUserID")
 	}
 
 	var r0 uuid.UUID
@@ -124,18 +124,18 @@ func (_mock *MockTokenService) GetUserId(token string) (uuid.UUID, error) {
 	return r0, r1
 }
 
-// MockTokenService_GetUserId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserId'
-type MockTokenService_GetUserId_Call struct {
+// MockTokenService_GetUserID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserID'
+type MockTokenService_GetUserID_Call struct {
 	*mock.Call
 }
 
-// GetUserId is a helper method to define mock.On call
+// GetUserID is a helper method to define mock.On call
 //   - token string
-func (_e *MockTokenService_Expecter) GetUserId(token interface{}) *MockTokenService_GetUserId_Call {
-	return &MockTokenService_GetUserId_Call{Call: _e.mock.On("GetUserId", token)}
+func (_e *MockTokenService_Expecter) GetUserID(token interface{}) *MockTokenService_GetUserID_Call {
+	return &MockTokenService_GetUserID_Call{Call: _e.mock.On("GetUserID", token)}
 }
 
-func (_c *MockTokenService_GetUserId_Call) Run(run func(token string)) *MockTokenService_GetUserId_Call {
+func (_c *MockTokenService_GetUserID_Call) Run(run func(token string)) *MockTokenService_GetUserID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -148,12 +148,12 @@ func (_c *MockTokenService_GetUserId_Call) Run(run func(token string)) *MockToke
 	return _c
 }
 
-func (_c *MockTokenService_GetUserId_Call) Return(uUID uuid.UUID, err error) *MockTokenService_GetUserId_Call {
+func (_c *MockTokenService_GetUserID_Call) Return(uUID uuid.UUID, err error) *MockTokenService_GetUserID_Call {
 	_c.Call.Return(uUID, err)
 	return _c
 }
 
-func (_c *MockTokenService_GetUserId_Call) RunAndReturn(run func(token string) (uuid.UUID, error)) *MockTokenService_GetUserId_Call {
+func (_c *MockTokenService_GetUserID_Call) RunAndReturn(run func(token string) (uuid.UUID, error)) *MockTokenService_GetUserID_Call {
 	_c.Call.Return(run)
 	return _c
 }

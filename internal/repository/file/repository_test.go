@@ -31,8 +31,8 @@ func TestAdd(t *testing.T) {
 	// Arrange
 	key := "key"
 	value := "value"
-	userId := uuid.New()
-	shortenURL := model.NewShortenURL(userId, key, value)
+	userID := uuid.New()
+	shortenURL := model.NewShortenURL(userID, key, value)
 	fileStoragePath := filepath.Join(os.TempDir(), "test*.json")
 
 	repository, _ := NewFileRepository(fileStoragePath)
@@ -44,7 +44,7 @@ func TestAdd(t *testing.T) {
 	// Assert
 	val, ok := repository.items[key]
 	require.True(t, ok)
-	require.Equal(t, userId, val.UserID)
+	require.Equal(t, userID, val.UserID)
 	require.Equal(t, value, val.OriginalValue)
 }
 

@@ -12,7 +12,7 @@ import (
 type TokenService interface {
 	IsValid(token string) bool
 	GetToken(userID uuid.UUID) (string, error)
-	GetUserId(token string) (uuid.UUID, error)
+	GetUserID(token string) (uuid.UUID, error)
 }
 
 func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) func(next http.Handler) http.Handler {
@@ -58,7 +58,7 @@ func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) fun
 					return
 				}
 
-				userID, err = tokenService.GetUserId(token)
+				userID, err = tokenService.GetUserID(token)
 				if err != nil {
 					logger.Error("failed to get userID from token", "error", err)
 					w.WriteHeader(http.StatusUnauthorized)

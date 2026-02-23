@@ -49,7 +49,7 @@ func (a *TokenService) GetToken(userID uuid.UUID) (string, error) {
 	return hex.EncodeToString(token), nil
 }
 
-func (a *TokenService) GetUserId(token string) (uuid.UUID, error) {
+func (a *TokenService) GetUserID(token string) (uuid.UUID, error) {
 	data, err := hex.DecodeString(token)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("invalid token format: %w", err)
@@ -77,7 +77,7 @@ func (a *TokenService) GetUserId(token string) (uuid.UUID, error) {
 }
 
 func (a *TokenService) IsValid(token string) bool {
-	_, err := a.GetUserId(token)
+	_, err := a.GetUserID(token)
 	return err == nil
 }
 

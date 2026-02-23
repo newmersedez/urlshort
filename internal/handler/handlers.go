@@ -35,7 +35,7 @@ type Shortener interface {
 type TokenService interface {
 	IsValid(token string) bool
 	GetToken(userID uuid.UUID) (string, error)
-	GetUserId(token string) (uuid.UUID, error)
+	GetUserID(token string) (uuid.UUID, error)
 }
 
 type shortenURLRequest struct {
@@ -195,7 +195,7 @@ func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	if json.NewEncoder(w).Encode(responseBody); err != nil {
+	if err := json.NewEncoder(w).Encode(responseBody); err != nil {
 		h.logger.Error("failed to write response body", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
