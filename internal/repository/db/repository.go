@@ -85,6 +85,38 @@ func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.S
 	return shortenURLs, nil
 }
 
+
+func (r *DBRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
+	shortenURLs := make([]model.ShortenURL, 0)
+
+	rows, err := r.db.pool.Query(
+		ctx,
+		`SELECT id, user_id, original_value, created_at, is_deleted 
+		FROM shorten_urls WHERE is_deleted = true`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute SQL statement: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var url model.ShortenURL
+		err = rows.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt, &url.Deleted)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan query result: %w", err)
+		}
+
+		shortenURLs = append(shortenURLs, url)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute SQL statement: %w", err)
+	}
+	return shortenURLs, nil
+}
+
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	tag, err := r.db.pool.Exec(
 		ctx,

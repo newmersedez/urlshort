@@ -254,6 +254,68 @@ func (_c *MockRepository_Get_Call) RunAndReturn(run func(ctx context.Context, id
 	return _c
 }
 
+// GetDeletedList provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDeletedList")
+	}
+
+	var r0 []model.ShortenURL
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]model.ShortenURL, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []model.ShortenURL); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.ShortenURL)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetDeletedList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDeletedList'
+type MockRepository_GetDeletedList_Call struct {
+	*mock.Call
+}
+
+// GetDeletedList is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockRepository_Expecter) GetDeletedList(ctx interface{}) *MockRepository_GetDeletedList_Call {
+	return &MockRepository_GetDeletedList_Call{Call: _e.mock.On("GetDeletedList", ctx)}
+}
+
+func (_c *MockRepository_GetDeletedList_Call) Run(run func(ctx context.Context)) *MockRepository_GetDeletedList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetDeletedList_Call) Return(shortenURLs []model.ShortenURL, err error) *MockRepository_GetDeletedList_Call {
+	_c.Call.Return(shortenURLs, err)
+	return _c
+}
+
+func (_c *MockRepository_GetDeletedList_Call) RunAndReturn(run func(ctx context.Context) ([]model.ShortenURL, error)) *MockRepository_GetDeletedList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetList provides a mock function for the type MockRepository
 func (_mock *MockRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
 	ret := _mock.Called(ctx, userID)

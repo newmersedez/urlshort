@@ -22,6 +22,7 @@ import (
 type Repository interface {
 	Get(ctx context.Context, id string) (*model.ShortenURL, error)
 	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
+	GetDeletedList(ctx context.Context) ([]model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error

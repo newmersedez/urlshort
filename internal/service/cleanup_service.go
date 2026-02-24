@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -11,12 +12,13 @@ import (
 
 type DeleteRequest struct {
 	UserID uuid.UUID
-	IDs    []string
+	ShortenURLIDs    []string
 }
 
 type Repository interface {
 	Get(ctx context.Context, id string) (*model.ShortenURL, error)
 	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
+	GetDeletedList(ctx context.Context) ([]model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
 	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error
@@ -31,12 +33,16 @@ type CleanupService struct {
 	logger *slog.Logger
 }
 
-func NewCleanupService(store Repository, logger *slog.Logger) *CleanupService {
-	return &CleanupService{
+func NewCleanupService(ctx context.Context, store Repository, logger *slog.Logger) *CleanupService {
+	service := &CleanupService{
 		queue:  make(chan DeleteRequest, 1024),
 		store:  store,
 		logger: logger,
 	}
+
+	service.loadPending(ctx)
+
+	return service
 }
 
 func (s *CleanupService) ScheduleDelete(ctx context.Context, userID uuid.UUID, ids []string) {
@@ -44,7 +50,7 @@ func (s *CleanupService) ScheduleDelete(ctx context.Context, userID uuid.UUID, i
 		select {
 		case <-ctx.Done():
 			s.logger.Warn("context cancelled while scheduling delete", "ids_count", len(ids))
-		case s.queue <- DeleteRequest{UserID: userID, IDs: ids}:
+		case s.queue <- DeleteRequest{UserID: userID, ShortenURLIDs: ids}:
 			s.logger.Debug("added hard deletion task to cleanup service", "ids_count", len(ids))
 		}
 	}()
@@ -63,7 +69,7 @@ func (s *CleanupService) Start(ctx context.Context) {
 			if err := s.store.HardDeleteBatch(ctx, buffer); err != nil {
 				s.logger.Error("failed to hard delete batch", "error", err)
 			} else {
-				s.logger.Info("hard deleted URLs", "count", len(buffer))
+				s.logger.Debug("hard deleted URLs", "count", len(buffer))
 			}
 			buffer = buffer[:0]
 		}
@@ -72,7 +78,7 @@ func (s *CleanupService) Start(ctx context.Context) {
 	for {
 		select {
 		case req := <-s.queue:
-			for _, id := range req.IDs {
+			for _, id := range req.ShortenURLIDs {
 				buffer = append(buffer, id)
 				if len(buffer) >= batchSize {
 					flush()
@@ -85,4 +91,34 @@ func (s *CleanupService) Start(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (s *CleanupService) loadPending(ctx context.Context) error {
+	pendingUrls, err := s.store.GetDeletedList(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to restore deletion tasks queue: %w", err)
+	}
+
+	userUrls := make(map[uuid.UUID][]string)
+
+	for _, url := range pendingUrls {
+		if _, exists := userUrls[url.UserID]; !exists {
+			userUrls[url.UserID] = make([]string, 0)
+		}
+		userUrls[url.UserID] = append(userUrls[url.UserID], url.ID)
+	}
+
+	for userID, urlIDs := range userUrls {
+		go func() {
+			select {
+			case <-ctx.Done():
+				s.logger.Warn("context cancelled while scheduling delete", "ids_count", len(urlIDs))
+			case s.queue <- DeleteRequest{UserID: userID, ShortenURLIDs: urlIDs}:
+				s.logger.Debug("added hard deletion task to cleanup service", "ids_count", len(urlIDs))
+			}
+		}()
+	}
+	s.logger.Debug("restored hard deletion tasks queue", "urls_count", len(pendingUrls))
+
+	return nil
 }

@@ -49,6 +49,20 @@ func (r *MemoryRepository) GetList(ctx context.Context, userID uuid.UUID) ([]mod
 	return shortenURLs, nil
 }
 
+func (r *MemoryRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	shortenURLs := make([]model.ShortenURL, 0, len(r.items))
+	for _, value := range r.items {
+		if value.Deleted {
+			shortenURLs = append(shortenURLs, value)
+		}
+	}
+
+	return shortenURLs, nil
+}
+
 func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
