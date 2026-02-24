@@ -85,7 +85,7 @@ func generateRandom(size int) ([]byte, error) {
 	b := make([]byte, size)
 	_, err := rand.Read(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate random bytes array: %w", err)
 	}
 
 	return b, nil

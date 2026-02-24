@@ -85,7 +85,6 @@ func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.S
 	return shortenURLs, nil
 }
 
-
 func (r *DBRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
 	shortenURLs := make([]model.ShortenURL, 0)
 

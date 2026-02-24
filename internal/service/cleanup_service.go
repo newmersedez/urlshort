@@ -11,8 +11,8 @@ import (
 )
 
 type DeleteRequest struct {
-	UserID uuid.UUID
-	ShortenURLIDs    []string
+	UserID        uuid.UUID
+	ShortenURLIDs []string
 }
 
 type Repository interface {

@@ -31,7 +31,7 @@ type Repository interface {
 	Close()
 }
 
-type Shortener interface {
+type ShortenerService interface {
 	Shorten(url string) (string, error)
 }
 
@@ -70,23 +70,23 @@ type urlListResponse struct {
 }
 
 type handlers struct {
-	baseURL        string
-	store          Repository
-	shortener      Shortener
-	tokenService   TokenService
-	cleanupService CleanupService
-	logger         *slog.Logger
+	baseURL          string
+	store            Repository
+	logger           *slog.Logger
+	shortenerService ShortenerService
+	tokenService     TokenService
+	cleanupService   CleanupService
 }
 
 func Serve(
-	ctx context.Context, 
-	cfg config.Config, 
-	store Repository, 
-	shortener Shortener, 
-	logger *slog.Logger, 
-	tokenService TokenService, 
+	ctx context.Context,
+	cfg config.Config,
+	store Repository,
+	shortener ShortenerService,
+	logger *slog.Logger,
+	tokenService TokenService,
 	cleanupService CleanupService) error {
-	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger, tokenService, cleanupService)
+	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
@@ -106,19 +106,19 @@ func Serve(
 }
 
 func newHandlers(
-	baseURL string, 
-	store Repository, 
-	shortener Shortener, 
-	logger *slog.Logger, 
-	tokenService TokenService, 
+	baseURL string,
+	store Repository,
+	logger *slog.Logger,
+	shortenerService ShortenerService,
+	tokenService TokenService,
 	cleanupService CleanupService) (*handlers, error) {
 	handlers := &handlers{
-		baseURL:        baseURL,
-		store:          store,
-		shortener:      shortener,
-		logger:         logger,
-		tokenService:   tokenService,
-		cleanupService: cleanupService,
+		baseURL:          baseURL,
+		store:            store,
+		shortenerService: shortenerService,
+		logger:           logger,
+		tokenService:     tokenService,
+		cleanupService:   cleanupService,
 	}
 
 	return handlers, nil
@@ -254,7 +254,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	id, err := h.shortener.Shorten(request.URL)
+	id, err := h.shortenerService.Shorten(request.URL)
 	if err != nil {
 		http.Error(w, "invalid URL", http.StatusBadRequest)
 		return
@@ -322,7 +322,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.shortener.Shorten(originalURL)
+	id, err := h.shortenerService.Shorten(originalURL)
 	if err != nil {
 		http.Error(w, "failed to shorten URL", http.StatusBadRequest)
 		return
@@ -384,7 +384,7 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 	shortenURLs := make([]*model.ShortenURL, 0, len(requestBody))
 
 	for _, item := range requestBody {
-		id, err := h.shortener.Shorten(item.OriginalURL)
+		id, err := h.shortenerService.Shorten(item.OriginalURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("invalid URL %s", item.OriginalURL), http.StatusBadRequest)
 			return

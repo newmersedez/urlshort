@@ -57,7 +57,7 @@ func TestGet(t *testing.T) {
 
 func TestGetList(t *testing.T) {
 	// Arrange
-	userID := uuid.New();
+	userID := uuid.New()
 	shortenURL := model.NewShortenURL(userID, "key1", "value1")
 	anotherShortenURL := model.NewShortenURL(uuid.New(), "key2", "value2")
 
