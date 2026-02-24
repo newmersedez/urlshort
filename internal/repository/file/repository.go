@@ -57,7 +57,7 @@ func (r *FileRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model
 
 	shortenURLs := make([]model.ShortenURL, 0, len(r.items))
 	for _, value := range r.items {
-		if value.UserID != userID {
+		if value.UserID != userID || value.Deleted {
 			continue
 		}
 
@@ -86,6 +86,31 @@ func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shor
 		if _, exists := r.items[shortenURL.ID]; !exists {
 			r.encoder.Encode(shortenURL)
 			r.items[shortenURL.ID] = *shortenURL
+		}
+	}
+	return nil
+}
+
+func (r *FileRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range ids {
+		if url, exists := r.items[id]; exists && url.UserID == userID {
+			url.Deleted = true
+			r.items[id] = url
+		}
+	}
+	return nil
+}
+
+func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range ids {
+		if url, exists := r.items[id]; exists && url.Deleted {
+			delete(r.items, id)
 		}
 	}
 	return nil

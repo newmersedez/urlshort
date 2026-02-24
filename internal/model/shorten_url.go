@@ -11,6 +11,7 @@ type ShortenURL struct {
 	UserID        uuid.UUID
 	OriginalValue string
 	CreatedAt     time.Time
+	Deleted		  bool
 }
 
 func NewShortenURL(userID uuid.UUID, id, value string) *ShortenURL {

@@ -35,12 +35,12 @@ func NewDBRepository(ctx context.Context, dsn string, logger *slog.Logger) (*DBR
 func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	row := r.db.pool.QueryRow(
 		ctx,
-		`SELECT id, user_id, original_value, created_at 
+		`SELECT id, user_id, original_value, created_at, is_deleted 
 		FROM shorten_urls WHERE id = $1`,
 		id)
 
 	var url model.ShortenURL
-	err := row.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt)
+	err := row.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt, &url.Deleted)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -58,8 +58,8 @@ func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.S
 
 	rows, err := r.db.pool.Query(
 		ctx,
-		`SELECT id, user_id, original_value, created_at 
-		FROM shorten_urls WHERE user_id = $1`,
+		`SELECT id, user_id, original_value, created_at, is_deleted 
+		FROM shorten_urls WHERE user_id = $1 AND is_deleted = false`,
 		userID,
 	)
 	if err != nil {
@@ -70,7 +70,7 @@ func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.S
 
 	for rows.Next() {
 		var url model.ShortenURL
-		err = rows.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt)
+		err = rows.Scan(&url.ID, &url.UserID, &url.OriginalValue, &url.CreatedAt, &url.Deleted)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan query result: %w", err)
 		}
@@ -134,6 +134,60 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 
 	if err != nil {
 		return fmt.Errorf("failed to execute SQL stetement: %w", err)
+	}
+
+	return nil
+}
+
+func (r *DBRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids)+1)
+	args[0] = userID
+
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = id
+	}
+
+	query := fmt.Sprintf(
+		`UPDATE shorten_urls SET is_deleted = true 
+		WHERE user_id = $1 AND id IN (%s)`,
+		strings.Join(placeholders, ","),
+	)
+
+	_, err := r.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete batch: %w", err)
+	}
+
+	return nil
+}
+
+func (r *DBRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(
+		`DELETE FROM shorten_urls WHERE id IN (%s) AND is_deleted = true`,
+		strings.Join(placeholders, ","),
+	)
+
+	_, err := r.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to hard delete batch: %w", err)
 	}
 
 	return nil

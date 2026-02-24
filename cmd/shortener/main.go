@@ -58,6 +58,8 @@ func run() error {
 
 	defer repo.Close()
 
+	cleanupService := service.NewCleanupService(repo, log)
+
 	log.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(*cfg, repo, shortener, log, token)
+	return handler.Serve(context.Background(), *cfg, repo, shortener, log, token, cleanupService)
 }

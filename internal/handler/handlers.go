@@ -24,6 +24,8 @@ type Repository interface {
 	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
+	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error
+	HardDeleteBatch(ctx context.Context, ids []string) error
 	Ping(ctx context.Context) error
 	Close()
 }
@@ -36,6 +38,11 @@ type TokenService interface {
 	IsValid(token string) bool
 	GetToken(userID uuid.UUID) (string, error)
 	GetUserID(token string) (uuid.UUID, error)
+}
+
+type CleanupService interface {
+	ScheduleDelete(ctx context.Context, userID uuid.UUID, ids []string)
+	Start(ctx context.Context)
 }
 
 type shortenURLRequest struct {
@@ -62,15 +69,23 @@ type urlListResponse struct {
 }
 
 type handlers struct {
-	baseURL      string
-	store        Repository
-	shortener    Shortener
-	tokenService TokenService
-	logger       *slog.Logger
+	baseURL        string
+	store          Repository
+	shortener      Shortener
+	tokenService   TokenService
+	cleanupService CleanupService
+	logger         *slog.Logger
 }
 
-func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slog.Logger, tokenService TokenService) error {
-	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger, tokenService)
+func Serve(
+	ctx context.Context, 
+	cfg config.Config, 
+	store Repository, 
+	shortener Shortener, 
+	logger *slog.Logger, 
+	tokenService TokenService, 
+	cleanupService CleanupService) error {
+	handler, err := newHandlers(cfg.BaseURL, store, shortener, logger, tokenService, cleanupService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
@@ -80,16 +95,29 @@ func Serve(cfg config.Config, store Repository, shortener Shortener, logger *slo
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
-	return server.ListenAndServe()
+	if err = server.ListenAndServe(); err != nil {
+		return fmt.Errorf("failed to start the application: %w", err)
+	}
+
+	go cleanupService.Start(ctx)
+
+	return nil
 }
 
-func newHandlers(baseURL string, store Repository, shortener Shortener, logger *slog.Logger, tokenService TokenService) (*handlers, error) {
+func newHandlers(
+	baseURL string, 
+	store Repository, 
+	shortener Shortener, 
+	logger *slog.Logger, 
+	tokenService TokenService, 
+	cleanupService CleanupService) (*handlers, error) {
 	handlers := &handlers{
-		baseURL:      baseURL,
-		store:        store,
-		shortener:    shortener,
-		logger:       logger,
-		tokenService: tokenService,
+		baseURL:        baseURL,
+		store:          store,
+		shortener:      shortener,
+		logger:         logger,
+		tokenService:   tokenService,
+		cleanupService: cleanupService,
 	}
 
 	return handlers, nil
@@ -102,12 +130,13 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Use(middleware.RequestCompressorMiddleware(handler.logger))
 	router.Use(middleware.AuthorizationMiddleware(handler.tokenService, handler.logger))
 
-	router.Post("/", handler.shortenURLHandle)
-	router.Post("/api/shorten", handler.enhancedShortenURLHandle)
-	router.Post("/api/shorten/batch", handler.shortenBatchURLsHandle)
 	router.Get("/api/user/urls", handler.GetURLsHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
 	router.Get("/ping", handler.pingDatabaseHandle)
+	router.Post("/", handler.shortenURLHandle)
+	router.Post("/api/shorten", handler.enhancedShortenURLHandle)
+	router.Post("/api/shorten/batch", handler.shortenBatchURLsHandle)
+	router.Delete("/api/user/urls", handler.deleteURLsHandle)
 
 	return router
 }
@@ -144,6 +173,11 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	}
 	if url == nil {
 		http.Error(w, "URL not found", http.StatusNotFound)
+		return
+	}
+
+	if url.Deleted {
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 
@@ -398,4 +432,38 @@ func (h *handlers) pingDatabaseHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *handlers) deleteURLsHandle(w http.ResponseWriter, r *http.Request) {
+	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+		return
+	}
+
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok || userID == uuid.Nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	var ids []string
+	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
+		http.Error(w, "request body is not a valid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if len(ids) == 0 {
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
+
+	if err := h.store.SoftDeleteBatch(r.Context(), userID, ids); err != nil {
+		h.logger.Error("failed to mark URLs as deleted", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	h.cleanupService.ScheduleDelete(r.Context(), userID, ids)
+
+	w.WriteHeader(http.StatusAccepted)
 }

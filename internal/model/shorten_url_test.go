@@ -19,4 +19,5 @@ func TestNewShortenURL(t *testing.T) {
 	require.Equal(t, key, shortenURL.ID)
 	require.Equal(t, userID, shortenURL.UserID)
 	require.Equal(t, value, shortenURL.OriginalValue)
+	require.False(t, shortenURL.Deleted)
 }
