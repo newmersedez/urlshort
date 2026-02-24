@@ -7,8 +7,8 @@ packages:
             pkgname: "mocks"
             structname: "Mock{{.InterfaceName}}"
         interfaces:
-            Shortener:
             Repository:
+            ShortenerService:
             CleanupService:
     github.com/newmersedez/urlshort/internal/middleware:
         config:
