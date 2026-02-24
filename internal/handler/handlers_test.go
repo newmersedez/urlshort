@@ -41,7 +41,8 @@ func TestCanShortenValidURL(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL).Return(id, nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	cleanupService := mocks.NewMockCleanupService(t)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
@@ -78,8 +79,9 @@ func TestCannotShortenInvalidURL(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid url")).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(originalURL))
 	request.Header.Set("Content-Type", "text/plain")
@@ -111,8 +113,9 @@ func TestCanGetFullURLByShortenValue(t *testing.T) {
 	mockRepo.EXPECT().Get(mock.Anything, id).Return(shortenURL, nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -142,8 +145,9 @@ func TestCannotGetFullURLByShortenValueIfIdIsNotSpecified(t *testing.T) {
 	logger := slog.Default()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	request := httptest.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -171,8 +175,9 @@ func TestCannotGetFullURLByShortenValueIfItDoesNotExist(t *testing.T) {
 	mockRepo.EXPECT().Get(mock.Anything, id).Return(nil, nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.Header.Set("Content-Type", "text/plain")
@@ -210,8 +215,9 @@ func TestCanShortenValidURLViaJSONHandler(t *testing.T) {
 	})).Return(nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
@@ -250,8 +256,9 @@ func TestCannotHandleInvalidRequestBodyViaJSONHandler(t *testing.T) {
 	mockRepo := mocks.NewMockRepository(t)
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`"url": "%s"`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
@@ -278,8 +285,9 @@ func TestCannotHandleInvalidContentTypeViaJSONHandler(t *testing.T) {
 	logger := slog.Default()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "text/xml")
@@ -307,8 +315,9 @@ func TestCannotShortenInvalidURLViaJSONHandler(t *testing.T) {
 	mockShortener.EXPECT().Shorten(originalURL).Return("", errors.New("invalid URL")).Maybe()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(fmt.Sprintf(`{"url": "%s"}`, originalURL)))
 	r.Header.Add("Content-Type", "application/json")
@@ -361,8 +370,9 @@ func TestCanShortenValidBatchURLsViaJSONHandler(t *testing.T) {
 	).Return(nil).Once()
 
 	tokenService := middlewareMocks.NewMockTokenService(t)
+	cleanupService := mocks.NewMockCleanupService(t)
 
-	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService)
+	h, _ := newHandlers(baseURL, mockRepo, mockShortener, logger, tokenService, cleanupService)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", strings.NewReader(fmt.Sprintf(`
 		[
