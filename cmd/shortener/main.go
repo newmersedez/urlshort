@@ -29,7 +29,12 @@ func run() error {
 		return fmt.Errorf("failed to initialize logger object: %w", err)
 	}
 
-	shortener := service.NewURLShortenerService()
+	tokenService, err := service.NewTokenService()
+	if err != nil {
+		return fmt.Errorf("failed to initialize token service object: %w", err)
+	}
+
+	shortenerService := service.NewURLShortenerService()
 
 	var repo handler.Repository
 
@@ -53,6 +58,8 @@ func run() error {
 
 	defer repo.Close()
 
+	cleanupService := service.NewCleanupService(context.Background(), repo, log)
+
 	log.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(*cfg, repo, shortener, log)
+	return handler.Serve(context.Background(), *cfg, repo, shortenerService, log, tokenService, cleanupService)
 }

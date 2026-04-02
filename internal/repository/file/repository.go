@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
@@ -50,6 +51,36 @@ func (r *FileRepository) Get(ctx context.Context, id string) (*model.ShortenURL,
 	return &shortenURL, nil
 }
 
+func (r *FileRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	shortenURLs := make([]model.ShortenURL, 0, len(r.items))
+	for _, value := range r.items {
+		if value.UserID != userID || value.Deleted {
+			continue
+		}
+
+		shortenURLs = append(shortenURLs, value)
+	}
+
+	return shortenURLs, nil
+}
+
+func (r *FileRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	shortenURLs := make([]model.ShortenURL, 0, len(r.items))
+	for _, value := range r.items {
+		if value.Deleted {
+			shortenURLs = append(shortenURLs, value)
+		}
+	}
+
+	return shortenURLs, nil
+}
+
 func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -69,6 +100,31 @@ func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shor
 		if _, exists := r.items[shortenURL.ID]; !exists {
 			r.encoder.Encode(shortenURL)
 			r.items[shortenURL.ID] = *shortenURL
+		}
+	}
+	return nil
+}
+
+func (r *FileRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range ids {
+		if url, exists := r.items[id]; exists && url.UserID == userID {
+			url.Deleted = true
+			r.items[id] = url
+		}
+	}
+	return nil
+}
+
+func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range ids {
+		if url, exists := r.items[id]; exists && url.Deleted {
+			delete(r.items, id)
 		}
 	}
 	return nil
