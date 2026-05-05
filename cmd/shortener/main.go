@@ -60,6 +60,14 @@ func run() error {
 
 	cleanupService := service.NewCleanupService(context.Background(), repo, log)
 
+	auditService := service.NewAuditService()
+	if cfg.AuditFile != "" {
+		auditService.Subscribe(service.NewFileAuditObserver(cfg.AuditFile))
+	}
+	if cfg.AuditURL != "" {
+		auditService.Subscribe(service.NewHTTPAuditObserver(cfg.AuditURL))
+	}
+
 	log.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(context.Background(), *cfg, repo, shortenerService, log, tokenService, cleanupService)
+	return handler.Serve(context.Background(), *cfg, repo, shortenerService, log, tokenService, cleanupService, auditService)
 }

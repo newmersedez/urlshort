@@ -15,6 +15,8 @@ type Config struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	AuditFile       string `env:"AUDIT_FILE"`
+	AuditURL        string `env:"AUDIT_URL"`
 }
 
 func NewConfig() (*Config, error) {
@@ -25,6 +27,8 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.LogLevel, "l", "info", "Minimal log level")
 	flag.StringVar(&cfg.FileStoragePath, "f", filepath.Join(os.TempDir(), "storage.json"), "File storage path")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database connection string")
+	flag.StringVar(&cfg.AuditFile, "audit-file", "", "Audit file path")
+	flag.StringVar(&cfg.AuditURL, "audit-url", "", "Audit remote server URL")
 	flag.Parse()
 
 	if err := env.Parse(&cfg); err != nil {

@@ -46,6 +46,10 @@ type CleanupService interface {
 	Start(ctx context.Context)
 }
 
+type AuditService interface {
+	Notify(event *model.AuditEvent)
+}
+
 type shortenURLRequest struct {
 	URL string `json:"url"`
 }
@@ -76,6 +80,7 @@ type handlers struct {
 	shortenerService ShortenerService
 	tokenService     TokenService
 	cleanupService   CleanupService
+	auditService     AuditService
 }
 
 func Serve(
@@ -85,8 +90,9 @@ func Serve(
 	shortener ShortenerService,
 	logger *slog.Logger,
 	tokenService TokenService,
-	cleanupService CleanupService) error {
-	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService)
+	cleanupService CleanupService,
+	auditService AuditService) error {
+	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService, auditService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
@@ -111,7 +117,8 @@ func newHandlers(
 	logger *slog.Logger,
 	shortenerService ShortenerService,
 	tokenService TokenService,
-	cleanupService CleanupService) (*handlers, error) {
+	cleanupService CleanupService,
+	auditService AuditService) (*handlers, error) {
 	handlers := &handlers{
 		baseURL:          baseURL,
 		store:            store,
@@ -119,6 +126,7 @@ func newHandlers(
 		logger:           logger,
 		tokenService:     tokenService,
 		cleanupService:   cleanupService,
+		auditService:     auditService,
 	}
 
 	return handlers, nil
@@ -181,6 +189,9 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusGone)
 		return
 	}
+
+	event := model.NewAuditEvent("follow", url.UserID.String(), url.OriginalValue)
+	h.auditService.Notify(event)
 
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
@@ -286,6 +297,9 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	event := model.NewAuditEvent("shorten", userID.String(), request.URL)
+	h.auditService.Notify(event)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(response)
@@ -351,6 +365,10 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	Send audit event
+	event := model.NewAuditEvent("shorten", userID.String(), originalURL)
+	h.auditService.Notify(event)
+
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fullShortenURL))
@@ -409,6 +427,11 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 		h.logger.Error("failed to save shorten URLs to the storage", "error", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
+	}
+
+	for _, item := range requestBody {
+		event := model.NewAuditEvent("shorten", userID.String(), item.OriginalURL)
+		h.auditService.Notify(event)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
