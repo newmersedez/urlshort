@@ -42,3 +42,25 @@ git fetch template && git checkout template/v2 .github
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+
+
+### iter17: сравнение профилей
+
+```
+go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof 
+
+File: service.test
+Type: alloc_space
+Time: 2026-05-05 21:00:32 MSK
+Showing nodes accounting for -1850.78MB, 43.83% of 4222.44MB total
+Dropped 42 nodes (cum <= 21.11MB)
+      flat  flat%   sum%        cum   cum%
+-2432.83MB 57.62% 57.62% -2432.83MB 57.62%  net/url.parse
+  912.06MB 21.60% 36.02% -1850.78MB 43.83%  github.com/newmersedez/urlshort/internal/service.(*ShortenerService).Shorten
+ -330.01MB  7.82% 43.83%  -330.01MB  7.82%  encoding/hex.EncodeToString (inline)
+         0     0% 43.83%  -972.15MB 23.02%  github.com/newmersedez/urlshort/internal/service.BenchmarkShorten
+         0     0% 43.83%  -878.64MB 20.81%  github.com/newmersedez/urlshort/internal/service.BenchmarkShortenAlloc
+         0     0% 43.83% -2432.83MB 57.62%  net/url.ParseRequestURI
+         0     0% 43.83% -1850.78MB 43.83%  testing.(*B).launch
+         0     0% 43.83% -1849.27MB 43.80%  testing.(*B).runN
+```
