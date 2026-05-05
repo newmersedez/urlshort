@@ -18,7 +18,7 @@ func BenchmarkAdd(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		id := fmt.Sprintf("%08d", i)
 		url := model.NewShortenURL(userID, id, "https://example.com/"+id)
-		repo.Add(ctx, url) 
+		repo.Add(ctx, url)
 	}
 }
 
@@ -38,7 +38,7 @@ func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		id := fmt.Sprintf("%08d", i%count)
-		repo.Get(ctx, id) 
+		repo.Get(ctx, id)
 	}
 }
 
@@ -51,13 +51,13 @@ func BenchmarkGetList(b *testing.B) {
 	const count = 500
 	for i := 0; i < count; i++ {
 		id := fmt.Sprintf("%08d", i)
-		repo.Add(ctx, model.NewShortenURL(userID, id, "https://example.com/"+id))          
-		repo.Add(ctx, model.NewShortenURL(otherID, "x"+id, "https://other.com/"+id))       
+		repo.Add(ctx, model.NewShortenURL(userID, id, "https://example.com/"+id))
+		repo.Add(ctx, model.NewShortenURL(otherID, "x"+id, "https://other.com/"+id))
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		repo.GetList(ctx, userID) 
+		repo.GetList(ctx, userID)
 	}
 }

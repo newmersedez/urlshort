@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/newmersedez/urlshort/internal/model"
 	"log/slog"
+
+	"github.com/newmersedez/urlshort/internal/model"
 )
 
 type AuditObserver interface {
@@ -10,13 +11,13 @@ type AuditObserver interface {
 }
 
 type AuditService struct {
-	logger	  *slog.Logger
+	logger    *slog.Logger
 	observers []AuditObserver
 }
 
 func NewAuditService(logger *slog.Logger) *AuditService {
 	return &AuditService{
-		logger: logger,
+		logger:    logger,
 		observers: make([]AuditObserver, 0),
 	}
 }
