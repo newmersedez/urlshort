@@ -14,7 +14,7 @@ type AuditService struct {
 	observers []AuditObserver
 }
 
-func NewAuditService(logger *slog.logger) *AuditService {
+func NewAuditService(logger *slog.Logger) *AuditService {
 	return &AuditService{
 		logger: logger,
 		observers: make([]AuditObserver, 0),
@@ -31,7 +31,7 @@ func (as *AuditService) Notify(event *model.AuditEvent) {
 	for _, observer := range as.observers {
 		go func(obs AuditObserver, evt *model.AuditEvent) {
 			if err := obs.OnAuditEvent(evt); err != nil {
-				as.logger.Warning("failed to notify audit observer about avent", "error", err)
+				as.logger.Warn("failed to notify audit observer about avent", "error", err)
 			}
 		}(observer, event)
 	}

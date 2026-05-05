@@ -60,7 +60,7 @@ func run() error {
 
 	cleanupService := service.NewCleanupService(context.Background(), repo, log)
 
-	auditService := service.NewAuditService()
+	auditService := service.NewAuditService(log)
 	if cfg.AuditFile != "" {
 		auditService.Subscribe(service.NewFileAuditObserver(cfg.AuditFile))
 	}
