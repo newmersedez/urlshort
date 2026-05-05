@@ -10,29 +10,44 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
+// DeleteRequest описывает задачу на физическое удаление списка URL конкретного пользователя.
 type DeleteRequest struct {
 	UserID        uuid.UUID
 	ShortenURLIDs []string
 }
 
+// Repository описывает интерфейс хранилища, необходимый CleanupService.
 type Repository interface {
+	// Get возвращает сокращённый URL по идентификатору.
 	Get(ctx context.Context, id string) (*model.ShortenURL, error)
+	// GetList возвращает активные URL пользователя.
 	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
+	// GetDeletedList возвращает мягко удалённые URL для восстановления очереди при старте.
 	GetDeletedList(ctx context.Context) ([]model.ShortenURL, error)
+	// Add сохраняет новый URL.
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	// AddBatch сохраняет пакет URL.
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
+	// SoftDeleteBatch помечает URL как удалённые.
 	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error
+	// HardDeleteBatch физически удаляет URL.
 	HardDeleteBatch(ctx context.Context, ids []string) error
+	// Ping проверяет доступность хранилища.
 	Ping(ctx context.Context) error
+	// Close освобождает ресурсы хранилища.
 	Close()
 }
 
+// CleanupService собирает задачи на удаление URL в канал и периодически
+// выполняет пакетное физическое удаление через Repository.HardDeleteBatch.
 type CleanupService struct {
 	queue  chan DeleteRequest
 	store  Repository
 	logger *slog.Logger
 }
 
+// NewCleanupService создаёт CleanupService и восстанавливает очередь удалений
+// из мягко удалённых записей хранилища (на случай перезапуска).
 func NewCleanupService(ctx context.Context, store Repository, logger *slog.Logger) *CleanupService {
 	service := &CleanupService{
 		queue:  make(chan DeleteRequest, 1024),
@@ -45,6 +60,8 @@ func NewCleanupService(ctx context.Context, store Repository, logger *slog.Logge
 	return service
 }
 
+// ScheduleDelete неблокирующим образом добавляет задачу удаления в очередь.
+// Если контекст уже отменён до отправки, задача не добавляется и генерируется предупреждение.
 func (s *CleanupService) ScheduleDelete(ctx context.Context, userID uuid.UUID, ids []string) {
 	go func() {
 		select {
@@ -56,6 +73,9 @@ func (s *CleanupService) ScheduleDelete(ctx context.Context, userID uuid.UUID, i
 	}()
 }
 
+// Start запускает фоновый цикл обработки очереди удалений.
+// URL удаляются пакетами до 100 штук или по истечении 10-секундного интервала.
+// Завершается при отмене ctx, выполняя финальный сброс буфера.
 func (s *CleanupService) Start(ctx context.Context) {
 	const batchSize = 100
 	const flushInterval = 10 * time.Second

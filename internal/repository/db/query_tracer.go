@@ -17,6 +17,7 @@ func newQueryTracer(logger *slog.Logger) *queryTracer {
 	}
 }
 
+// TraceQueryStart логирует начало выполнения SQL-запроса на уровне Debug.
 func (t *queryTracer) TraceQueryStart(
 	ctx context.Context,
 	_ *pgx.Conn,
@@ -26,6 +27,7 @@ func (t *queryTracer) TraceQueryStart(
 	return ctx
 }
 
+// TraceQueryEnd логирует завершение SQL-запроса и его результат на уровне Debug.
 func (t *queryTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
 	t.logger.Debug("query finished", "result", data.CommandTag)
 }

@@ -1,3 +1,5 @@
+// Package middleware содержит HTTP-мидлвари сервиса: авторизацию,
+// сжатие запросов/ответов и логирование входящих запросов.
 package middleware
 
 import (
@@ -9,9 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// TokenService описывает зависимость мидлвари авторизации на сервис токенов.
 type TokenService interface {
+	// IsValid проверяет корректность токена.
 	IsValid(token string) bool
+	// GetToken выпускает токен для указанного userID.
 	GetToken(userID uuid.UUID) (string, error)
+	// GetUserID извлекает userID из токена.
 	GetUserID(token string) (uuid.UUID, error)
 }
 
@@ -22,15 +28,21 @@ const (
 	contextKeyUserID contextKey = "userID"
 )
 
+// GetUserID извлекает userID из контекста запроса.
+// Возвращает uuid.Nil и false, если идентификатор в контексте отсутствует.
 func GetUserID(ctx context.Context) (uuid.UUID, bool) {
 	userID, ok := ctx.Value(contextKeyUserID).(uuid.UUID)
 	return userID, ok
 }
 
+// SetUserID помещает userID в контекст и возвращает обновлённый контекст.
 func SetUserID(ctx context.Context, userID uuid.UUID) context.Context {
 	return context.WithValue(ctx, contextKeyUserID, userID)
 }
 
+// AuthorizationMiddleware читает cookie с токеном, проверяет его и кладёт userID в контекст.
+// Если cookie отсутствует, создаётся новый пользователь и выпускается токен.
+// При недействительном токене возвращается 401 Unauthorized.
 func AuthorizationMiddleware(tokenService TokenService, logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

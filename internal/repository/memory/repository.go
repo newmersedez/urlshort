@@ -1,3 +1,5 @@
+// Package memory реализует хранилище сокращённых URL на основе синхронизированной карты в памяти.
+// Данные не сохраняются при перезапуске. Подходит для разработки и тестирования.
 package memory
 
 import (
@@ -8,11 +10,14 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
+// MemoryRepository хранит сокращённые URL в памяти.
+// Все операции потокобезопасны благодаря RWMutex.
 type MemoryRepository struct {
 	mu    sync.RWMutex
 	items map[string]model.ShortenURL
 }
 
+// NewMemoryRepository создаёт новый пустой MemoryRepository.
 func NewMemoryRepository() (*MemoryRepository, error) {
 	repo := &MemoryRepository{
 		items: make(map[string]model.ShortenURL),
@@ -21,6 +26,8 @@ func NewMemoryRepository() (*MemoryRepository, error) {
 	return repo, nil
 }
 
+// Get возвращает сокращённый URL по идентификатору.
+// Возвращает nil, nil, если запись не найдена.
 func (r *MemoryRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -33,6 +40,7 @@ func (r *MemoryRepository) Get(ctx context.Context, id string) (*model.ShortenUR
 	return &shortenURL, nil
 }
 
+// GetList возвращает все активные (не удалённые) URL указанного пользователя.
 func (r *MemoryRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -49,6 +57,7 @@ func (r *MemoryRepository) GetList(ctx context.Context, userID uuid.UUID) ([]mod
 	return shortenURLs, nil
 }
 
+// GetDeletedList возвращает все мягко удалённые URL (используется CleanupService при старте).
 func (r *MemoryRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -63,6 +72,7 @@ func (r *MemoryRepository) GetDeletedList(ctx context.Context) ([]model.ShortenU
 	return shortenURLs, nil
 }
 
+// Add сохраняет новый сокращённый URL. Если ID уже существует — перезаписывает запись.
 func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -71,6 +81,7 @@ func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL
 	return nil
 }
 
+// AddBatch сохраняет пакет сокращённых URL за одну операцию блокировки.
 func (r *MemoryRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -81,6 +92,8 @@ func (r *MemoryRepository) AddBatch(ctx context.Context, shortenUrls []*model.Sh
 	return nil
 }
 
+// SoftDeleteBatch помечает URL пользователя как удалённые (Deleted = true).
+// URL с чужим UserID пропускаются.
 func (r *MemoryRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -94,6 +107,8 @@ func (r *MemoryRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
+// HardDeleteBatch физически удаляет мягко удалённые URL из хранилища.
+// Записи, у которых Deleted = false, не затрагиваются.
 func (r *MemoryRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -106,8 +121,10 @@ func (r *MemoryRepository) HardDeleteBatch(ctx context.Context, ids []string) er
 	return nil
 }
 
+// Ping всегда возвращает nil — in-memory хранилище всегда доступно.
 func (r *MemoryRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close — заглушка; in-memory хранилище не требует освобождения ресурсов.
 func (r *MemoryRepository) Close() {}

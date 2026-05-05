@@ -1,3 +1,5 @@
+// Package config загружает конфигурацию сервиса из флагов командной строки
+// и переменных окружения. Переменные окружения имеют приоритет над флагами.
 package config
 
 import (
@@ -9,16 +11,27 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Config хранит параметры запуска сервиса.
+// Значения читаются из флагов CLI (-a, -b, -l, -f, -d) и переменных окружения.
 type Config struct {
-	ServerAddr      string `env:"SERVER_ADDRESS"`
-	BaseURL         string `env:"BASE_URL"`
-	LogLevel        string `env:"LOG_LEVEL"`
+	// ServerAddr — адрес и порт HTTP-сервера (например, "localhost:8080").
+	ServerAddr string `env:"SERVER_ADDRESS"`
+	// BaseURL — базовый URL для формирования коротких ссылок (например, "http://localhost:8080").
+	BaseURL string `env:"BASE_URL"`
+	// LogLevel — минимальный уровень логирования (debug, info, warn, error).
+	LogLevel string `env:"LOG_LEVEL"`
+	// FileStoragePath — путь к файлу JSON для хранения ссылок (используется, если не задан DatabaseDSN).
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
-	AuditFile       string `env:"AUDIT_FILE"`
-	AuditURL        string `env:"AUDIT_URL"`
+	// DatabaseDSN — строка подключения к PostgreSQL. Если задана, файловое хранилище не используется.
+	DatabaseDSN string `env:"DATABASE_DSN"`
+	// AuditFile — путь к файлу аудит-лога. Если пуст — FileAuditObserver не подключается.
+	AuditFile string `env:"AUDIT_FILE"`
+	// AuditURL — URL удалённого сервера аудит-событий. Если пуст — HTTPAuditObserver не подключается.
+	AuditURL string `env:"AUDIT_URL"`
 }
 
+// NewConfig инициализирует Config: сначала парсит флаги CLI, затем переопределяет
+// значения переменными окружения. Возвращает ошибку при проблемах с env-парсингом.
 func NewConfig() (*Config, error) {
 	cfg := Config{}
 

@@ -1,3 +1,6 @@
+// Package handler реализует HTTP-обработчики сервиса сокращения URL.
+// Пакет предоставляет маршрутизатор и набор хендлеров для работы
+// с URL: сокращение, перенаправление, пакетная обработка и удаление.
 package handler
 
 import (
@@ -8,7 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -19,34 +22,57 @@ import (
 	"github.com/newmersedez/urlshort/internal/repository/db"
 )
 
+// Repository описывает интерфейс для хранилища сокращённых URL.
+// Реализации могут быть in-memory, файловыми или использовать базу данных.
 type Repository interface {
+	// Get возвращает сокращённый URL по его идентификатору.
 	Get(ctx context.Context, id string) (*model.ShortenURL, error)
+	// GetList возвращает все активные URL пользователя.
 	GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error)
+	// GetDeletedList возвращает все мягко удалённые URL.
 	GetDeletedList(ctx context.Context) ([]model.ShortenURL, error)
+	// Add сохраняет новый сокращённый URL.
 	Add(ctx context.Context, shortenURL *model.ShortenURL) error
+	// AddBatch сохраняет пакет сокращённых URL за одну операцию.
 	AddBatch(ctx context.Context, shortenURLs []*model.ShortenURL) error
+	// SoftDeleteBatch помечает список URL пользователя как удалённые.
 	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error
+	// HardDeleteBatch физически удаляет URL из хранилища.
 	HardDeleteBatch(ctx context.Context, ids []string) error
+	// Ping проверяет доступность хранилища.
 	Ping(ctx context.Context) error
+	// Close освобождает ресурсы хранилища.
 	Close()
 }
 
+// ShortenerService описывает сервис генерации короткого идентификатора из URL.
 type ShortenerService interface {
+	// Shorten возвращает короткий идентификатор для переданного URL.
+	// Ошибка возвращается, если URL имеет недопустимую схему.
 	Shorten(url string) (string, error)
 }
 
+// TokenService описывает сервис управления токенами аутентификации.
 type TokenService interface {
+	// IsValid проверяет, является ли токен корректным и не истёкшим.
 	IsValid(token string) bool
+	// GetToken выпускает зашифрованный токен для переданного userID.
 	GetToken(userID uuid.UUID) (string, error)
+	// GetUserID расшифровывает токен и возвращает идентификатор пользователя.
 	GetUserID(token string) (uuid.UUID, error)
 }
 
+// CleanupService описывает сервис фонового удаления помеченных URL.
 type CleanupService interface {
+	// ScheduleDelete добавляет список идентификаторов в очередь на удаление.
 	ScheduleDelete(ctx context.Context, userID uuid.UUID, ids []string)
+	// Start запускает фоновый цикл обработки очереди удалений.
 	Start(ctx context.Context)
 }
 
+// AuditService описывает сервис записи аудит-событий.
 type AuditService interface {
+	// Notify асинхронно уведомляет всех подписчиков о произошедшем событии.
 	Notify(event *model.AuditEvent)
 }
 
@@ -83,6 +109,8 @@ type handlers struct {
 	auditService     AuditService
 }
 
+// Serve настраивает маршруты и запускает HTTP-сервер по адресу cfg.ServerAddr.
+// Функция блокирует выполнение до тех пор, пока сервер не остановится.
 func Serve(
 	ctx context.Context,
 	cfg config.Config,
@@ -111,6 +139,23 @@ func Serve(
 	return nil
 }
 
+// NewHandler создаёт http.Handler со всеми маршрутами сервиса.
+// Используйте эту функцию для интеграционного тестирования и документационных примеров.
+func NewHandler(
+	baseURL string,
+	store Repository,
+	shortener ShortenerService,
+	logger *slog.Logger,
+	tokenService TokenService,
+	cleanupService CleanupService,
+	auditService AuditService) (http.Handler, error) {
+	h, err := newHandlers(baseURL, store, logger, shortener, tokenService, cleanupService, auditService)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize handlers: %w", err)
+	}
+	return newRouter(h), nil
+}
+
 func newHandlers(
 	baseURL string,
 	store Repository,
@@ -120,7 +165,7 @@ func newHandlers(
 	cleanupService CleanupService,
 	auditService AuditService) (*handlers, error) {
 	handlers := &handlers{
-		baseURL:          baseURL,
+		baseURL:          strings.TrimRight(baseURL, "/") + "/",
 		store:            store,
 		shortenerService: shortenerService,
 		logger:           logger,
@@ -196,6 +241,12 @@ func (h *handlers) getOriginURLHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.OriginalValue, http.StatusTemporaryRedirect)
 }
 
+func (h *handlers) buildShortURL(id string) string {
+	return h.baseURL + id
+}
+
+// GetURLsHandle обрабатывает GET /api/user/urls — возвращает список URL текущего пользователя.
+// Требует действительный cookie с токеном аутентификации.
 func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok || userID == uuid.Nil {
@@ -214,15 +265,8 @@ func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 	responseBody := make([]urlListResponse, 0, len(urls))
 
 	for _, item := range urls {
-		shortURL, err := url.JoinPath(h.baseURL, item.ID)
-		if err != nil {
-			h.logger.Error("failed to build full shorten URL", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
 		responseBody = append(responseBody, urlListResponse{
-			ShortURL:    shortURL,
+			ShortURL:    h.buildShortURL(item.ID),
 			OriginalURL: item.OriginalValue,
 		})
 	}
@@ -271,12 +315,7 @@ func (h *handlers) enhancedShortenURLHandle(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, id)
-	if err != nil {
-		h.logger.Error("failed to build shorten URL", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	fullShortenURL := h.buildShortURL(id)
 
 	shortenURL := model.NewShortenURL(userID, id, request.URL)
 	response := shortenURLResponse{
@@ -342,12 +381,7 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullShortenURL, err := url.JoinPath(h.baseURL, id)
-	if err != nil {
-		h.logger.Error("failed to build full shorten URL", "error", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	fullShortenURL := h.buildShortURL(id)
 
 	shortenURL := model.NewShortenURL(userID, id, originalURL)
 
@@ -407,17 +441,10 @@ func (h *handlers) shortenBatchURLsHandle(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		shortenURL, err := url.JoinPath(h.baseURL, id)
-		if err != nil {
-			h.logger.Error("failed to build full shorten URL", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
 		shortenURLs = append(shortenURLs, model.NewShortenURL(userID, id, item.OriginalURL))
 		responseBody = append(responseBody, shortenBatchURLResponse{
 			CorrelationID: item.CorrelationID,
-			ShortURL:      shortenURL,
+			ShortURL:      h.buildShortURL(id),
 		})
 	}
 

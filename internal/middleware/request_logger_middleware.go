@@ -18,17 +18,21 @@ type (
 	}
 )
 
+// Write записывает тело ответа и накапливает количество записанных байт.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader фиксирует код статуса ответа для последующего логирования.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
+// RequestLoggerMiddleware логирует начало и завершение каждого HTTP-запроса:
+// метод, URI, статус ответа, длительность и размер тела.
 func RequestLoggerMiddleware(logger *slog.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {

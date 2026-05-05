@@ -9,17 +9,22 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
+// FileAuditObserver реализует AuditObserver, записывая события в файл в формате JSONL.
+// Запись потокобезопасна: каждый вызов OnAuditEvent захватывает мьютекс.
 type FileAuditObserver struct {
 	filePath string
 	mu       sync.Mutex
 }
 
+// NewFileAuditObserver создаёт FileAuditObserver, который пишет события в файл filePath.
+// Файл создаётся автоматически при первой записи; если файл уже существует — дополняется.
 func NewFileAuditObserver(filePath string) *FileAuditObserver {
 	return &FileAuditObserver{
 		filePath: filePath,
 	}
 }
 
+// OnAuditEvent сериализует событие в JSON и добавляет строку в конец файла.
 func (fao *FileAuditObserver) OnAuditEvent(event *model.AuditEvent) error {
 	fao.mu.Lock()
 	defer fao.mu.Unlock()

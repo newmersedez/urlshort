@@ -1,3 +1,5 @@
+// Package db реализует хранилище сокращённых URL на основе PostgreSQL
+// с пулом соединений pgxpool и автоматическими миграциями при старте.
 package db
 
 import (
@@ -13,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// DB хранит пул соединений к PostgreSQL.
 type DB struct {
 	pool *pgxpool.Pool
 }

@@ -1,3 +1,4 @@
+// Package logger предоставляет вспомогательный конструктор для slog.Logger.
 package logger
 
 import (
@@ -7,6 +8,9 @@ import (
 	"strings"
 )
 
+// NewLogger создаёт структурированный JSON-логгер с заданным уровнем логирования.
+// Допустимые значения logLevel: "debug", "info", "warn", "error" (без учёта регистра).
+// При пустой строке используется уровень Info.
 func NewLogger(logLevel string) (*slog.Logger, error) {
 	levelVar := new(slog.LevelVar)
 
