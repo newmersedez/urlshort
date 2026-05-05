@@ -16,7 +16,7 @@ type AuditService struct {
 
 func NewAuditService(logger *slog.logger) *AuditService {
 	return &AuditService{
-		logger: logger
+		logger: logger,
 		observers: make([]AuditObserver, 0),
 	}
 }

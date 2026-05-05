@@ -365,7 +365,6 @@ func (h *handlers) shortenURLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Send audit event
 	event := model.NewAuditEvent("shorten", userID.String(), originalURL)
 	h.auditService.Notify(event)
 
