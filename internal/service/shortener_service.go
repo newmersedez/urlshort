@@ -26,7 +26,6 @@ func (s *ShortenerService) Shorten(url string) (string, error) {
 	}
 
 	hash := md5.Sum([]byte(url))
-	// encode only first 4 bytes → 8-char hex string, avoids allocating a full 32-char string
 	encoded := hex.EncodeToString(hash[:4])
 	return encoded, nil
 }

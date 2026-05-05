@@ -54,7 +54,7 @@ func newExampleServer() (*httptest.Server, *http.Client, error) {
 
 	client := &http.Client{
 		Jar: jar,
-		// не следовать редиректам — нужен оригинальный статус 307
+		// не следовать редиректам - нужен оригинальный статус 307
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},

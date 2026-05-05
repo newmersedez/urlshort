@@ -9,15 +9,15 @@ import (
 
 // ShortenURL представляет сокращённую ссылку, хранящуюся в системе.
 type ShortenURL struct {
-	// ID — короткий идентификатор (8 hex-символов).
+	// ID - короткий идентификатор (8 hex-символов).
 	ID string
-	// UserID — идентификатор пользователя-владельца ссылки.
+	// UserID - идентификатор пользователя-владельца ссылки.
 	UserID uuid.UUID
-	// OriginalValue — исходный полный URL.
+	// OriginalValue - исходный полный URL.
 	OriginalValue string
-	// CreatedAt — время создания записи в UTC.
+	// CreatedAt - время создания записи в UTC.
 	CreatedAt time.Time
-	// Deleted — признак мягкого удаления; true означает, что ссылка деактивирована.
+	// Deleted - признак мягкого удаления; true означает, что ссылка деактивирована.
 	Deleted bool
 }
 

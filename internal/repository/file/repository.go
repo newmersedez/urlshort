@@ -119,7 +119,7 @@ func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shor
 }
 
 // SoftDeleteBatch помечает URL пользователя как удалённые (Deleted = true) в памяти.
-// Файл не обновляется — физическое удаление производится через HardDeleteBatch.
+// Файл не обновляется - физическое удаление производится через HardDeleteBatch.
 func (r *FileRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -146,7 +146,7 @@ func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) erro
 	return nil
 }
 
-// Ping всегда возвращает nil — файловое хранилище всегда доступно.
+// Ping всегда возвращает nil - файловое хранилище всегда доступно.
 func (r *FileRepository) Ping(ctx context.Context) error {
 	return nil
 }

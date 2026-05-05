@@ -15,7 +15,7 @@ type AuditObserver interface {
 }
 
 // AuditService уведомляет всех зарегистрированных наблюдателей об аудит-событиях.
-// Каждый наблюдатель вызывается в отдельной горутине — доставка асинхронная.
+// Каждый наблюдатель вызывается в отдельной горутине - доставка асинхронная.
 type AuditService struct {
 	logger    *slog.Logger
 	observers []AuditObserver

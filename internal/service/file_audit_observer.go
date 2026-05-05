@@ -17,7 +17,7 @@ type FileAuditObserver struct {
 }
 
 // NewFileAuditObserver создаёт FileAuditObserver, который пишет события в файл filePath.
-// Файл создаётся автоматически при первой записи; если файл уже существует — дополняется.
+// Файл создаётся автоматически при первой записи; если файл уже существует - дополняется.
 func NewFileAuditObserver(filePath string) *FileAuditObserver {
 	return &FileAuditObserver{
 		filePath: filePath,

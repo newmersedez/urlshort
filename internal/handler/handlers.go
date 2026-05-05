@@ -245,7 +245,7 @@ func (h *handlers) buildShortURL(id string) string {
 	return h.baseURL + id
 }
 
-// GetURLsHandle обрабатывает GET /api/user/urls — возвращает список URL текущего пользователя.
+// GetURLsHandle обрабатывает GET /api/user/urls - возвращает список URL текущего пользователя.
 // Требует действительный cookie с токеном аутентификации.
 func (h *handlers) GetURLsHandle(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())

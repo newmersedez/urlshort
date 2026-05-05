@@ -8,13 +8,13 @@ import (
 // AuditEvent описывает факт выполнения операции над URL.
 // Используется для аудит-лога: сохранения в файл или отправки на внешний сервер.
 type AuditEvent struct {
-	// Timestamp — Unix-время возникновения события.
+	// Timestamp - Unix-время возникновения события.
 	Timestamp int64 `json:"ts"`
-	// Action — тип операции, например "shorten" или "follow".
+	// Action - тип операции, например "shorten" или "follow".
 	Action string `json:"action"`
-	// UserID — строковое представление UUID пользователя, выполнившего действие.
+	// UserID - строковое представление UUID пользователя, выполнившего действие.
 	UserID string `json:"user_id"`
-	// URL — исходный полный URL, к которому относится событие.
+	// URL - исходный полный URL, к которому относится событие.
 	URL string `json:"url"`
 }
 

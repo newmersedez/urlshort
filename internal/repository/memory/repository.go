@@ -72,7 +72,7 @@ func (r *MemoryRepository) GetDeletedList(ctx context.Context) ([]model.ShortenU
 	return shortenURLs, nil
 }
 
-// Add сохраняет новый сокращённый URL. Если ID уже существует — перезаписывает запись.
+// Add сохраняет новый сокращённый URL. Если ID уже существует - перезаписывает запись.
 func (r *MemoryRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -121,10 +121,10 @@ func (r *MemoryRepository) HardDeleteBatch(ctx context.Context, ids []string) er
 	return nil
 }
 
-// Ping всегда возвращает nil — in-memory хранилище всегда доступно.
+// Ping всегда возвращает nil - in-memory хранилище всегда доступно.
 func (r *MemoryRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Close — заглушка; in-memory хранилище не требует освобождения ресурсов.
+// Close - заглушка; in-memory хранилище не требует освобождения ресурсов.
 func (r *MemoryRepository) Close() {}
