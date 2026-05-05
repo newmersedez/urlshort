@@ -1,11 +1,93 @@
 package handler_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
 	"strings"
+
+	"github.com/newmersedez/urlshort/internal/handler"
+	"github.com/newmersedez/urlshort/internal/repository/memory"
+	"github.com/newmersedez/urlshort/internal/service"
 )
+
+// newExampleServer создаёт тестовый HTTP-сервер с in-memory хранилищем.
+// Возвращает сервер и HTTP-клиент с cookie jar для автоматической обработки auth-токена.
+func newExampleServer() (*httptest.Server, *http.Client, error) {
+	repo, err := memory.NewMemoryRepository()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	shortener := service.NewURLShortenerService()
+
+	tokenSvc, err := service.NewTokenService()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	auditSvc := service.NewAuditService(logger)
+	cleanupSvc := service.NewCleanupService(context.Background(), repo, logger)
+
+	h, err := handler.NewHandler(
+		"http://localhost:8080",
+		repo, shortener, logger,
+		tokenSvc, cleanupSvc, auditSvc,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	srv := httptest.NewServer(h)
+
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		srv.Close()
+		return nil, nil, err
+	}
+
+	client := &http.Client{
+		Jar: jar,
+		// не следовать редиректам — нужен оригинальный статус 307
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	return srv, client, nil
+}
+
+// ExampleNewHandler демонстрирует создание обработчика с in-memory хранилищем.
+func ExampleNewHandler() {
+	repo, _ := memory.NewMemoryRepository()
+	shortener := service.NewURLShortenerService()
+	tokenSvc, _ := service.NewTokenService()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	auditSvc := service.NewAuditService(logger)
+	cleanupSvc := service.NewCleanupService(context.Background(), repo, logger)
+
+	h, err := handler.NewHandler(
+		"http://localhost:8080",
+		repo, shortener, logger,
+		tokenSvc, cleanupSvc, auditSvc,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	fmt.Println("server started:", srv.URL != "")
+	// Output:
+	// server started: true
+}
 
 // Example_shortenURL демонстрирует сокращение URL через POST / с типом text/plain.
 // Сервер возвращает 201 Created и короткую ссылку в теле ответа.
@@ -142,7 +224,7 @@ func Example_getUserURLs() {
 		ShortURL    string `json:"short_url"`
 		OriginalURL string `json:"original_url"`
 	}
-	json.NewDecoder(resp.Body).Decode(&urls)
+	json.NewDecoder(resp.Body).Decode(&urls) //nolint:errcheck
 
 	fmt.Println(resp.StatusCode)
 	fmt.Println(len(urls))
