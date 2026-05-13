@@ -106,7 +106,6 @@ type Node struct {
 
 	gen := readGen(t, dir)
 	assert.Contains(t, gen, "n.value = 0")
-	// Pointer-to-struct uses interface assertion, nil guard must be present.
 	assert.Contains(t, gen, "any(n.child).(interface{ Reset() })")
 	assert.Contains(t, gen, "n.child != nil")
 }
@@ -127,7 +126,6 @@ type Inner struct{}
 
 	gen := readGen(t, dir)
 	assert.Contains(t, gen, "o.count = 0")
-	// Non-pointer struct uses &field so pointer-receiver Reset() is reachable.
 	assert.Contains(t, gen, "any(&o.inner).(interface{ Reset() })")
 }
 

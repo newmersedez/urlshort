@@ -39,7 +39,6 @@ func run(root string) error {
 		if !d.IsDir() {
 			return nil
 		}
-		// Skip hidden directories, vendor and testdata.
 		base := d.Name()
 		if strings.HasPrefix(base, ".") || base == "vendor" || base == "testdata" {
 			return filepath.SkipDir
@@ -54,12 +53,10 @@ func processDir(dir string) error {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
 	if err != nil {
-		// Directory may contain no Go files; that's fine.
 		return nil
 	}
 
 	for _, pkg := range pkgs {
-		// Skip _test packages.
 		if strings.HasSuffix(pkg.Name, "_test") {
 			continue
 		}
@@ -108,8 +105,6 @@ func findAnnotatedStructs(pkg *ast.Package) []structInfo {
 				if !ok {
 					continue
 				}
-				// The comment can be on the GenDecl (single declaration)
-				// or on the TypeSpec itself (inside a grouped declaration).
 				if !hasGenerateComment(genDecl.Doc, typeSpec.Doc) {
 					continue
 				}
@@ -171,22 +166,18 @@ func writeFieldReset(buf *bytes.Buffer, recv, field string, typ ast.Expr) {
 		if zv, ok := primitiveZero(t.Name); ok {
 			fmt.Fprintf(buf, "\t%s.%s = %s\n", recv, field, zv)
 		} else {
-			// Struct type: take address so pointer-receiver Reset() is reachable.
 			fmt.Fprintf(buf, "\tif resetter, ok := any(&%s.%s).(interface{ Reset() }); ok {\n", recv, field)
 			fmt.Fprintf(buf, "\t\tresetter.Reset()\n\t}\n")
 		}
 	case *ast.ArrayType:
 		if t.Len == nil {
-			// Slice: truncate to zero length, keep underlying array.
 			fmt.Fprintf(buf, "\t%s.%s = %s.%s[:0]\n", recv, field, recv, field)
 		}
-		// Fixed-size arrays are not covered by the spec; skip.
 	case *ast.MapType:
 		fmt.Fprintf(buf, "\tclear(%s.%s)\n", recv, field)
 	case *ast.StarExpr:
 		writePointerFieldReset(buf, recv, field, t.X)
 	case *ast.SelectorExpr:
-		// Type from another package (e.g. time.Time). Use interface check.
 		fmt.Fprintf(buf, "\tif resetter, ok := any(&%s.%s).(interface{ Reset() }); ok {\n", recv, field)
 		fmt.Fprintf(buf, "\t\tresetter.Reset()\n\t}\n")
 	}
@@ -197,17 +188,14 @@ func writePointerFieldReset(buf *bytes.Buffer, recv, field string, inner ast.Exp
 	switch it := inner.(type) {
 	case *ast.Ident:
 		if zv, ok := primitiveZero(it.Name); ok {
-			// *primitive: dereference and assign zero.
 			fmt.Fprintf(buf, "\tif %s.%s != nil {\n", recv, field)
 			fmt.Fprintf(buf, "\t\t*%s.%s = %s\n\t}\n", recv, field, zv)
 		} else {
-			// *struct: use interface assertion (matches example from spec).
 			fmt.Fprintf(buf, "\tif resetter, ok := any(%s.%s).(interface{ Reset() }); ok && %s.%s != nil {\n",
 				recv, field, recv, field)
 			fmt.Fprintf(buf, "\t\tresetter.Reset()\n\t}\n")
 		}
 	case *ast.SelectorExpr:
-		// *pkg.Type
 		fmt.Fprintf(buf, "\tif resetter, ok := any(%s.%s).(interface{ Reset() }); ok && %s.%s != nil {\n",
 			recv, field, recv, field)
 		fmt.Fprintf(buf, "\t\tresetter.Reset()\n\t}\n")
