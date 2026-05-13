@@ -1,3 +1,5 @@
+// Package file реализует хранилище сокращённых URL на основе файла в формате JSONL.
+// Данные сохраняются между перезапусками; при старте происходит восстановление из файла.
 package file
 
 import (
@@ -11,6 +13,8 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
+// FileRepository хранит сокращённые URL в памяти и персистирует новые записи в файл.
+// Все операции потокобезопасны.
 type FileRepository struct {
 	mu      sync.RWMutex
 	file    *os.File
@@ -18,6 +22,7 @@ type FileRepository struct {
 	items   map[string]model.ShortenURL
 }
 
+// NewFileRepository открывает (или создаёт) файл filepath и восстанавливает данные из него.
 func NewFileRepository(filepath string) (*FileRepository, error) {
 	file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 
@@ -39,6 +44,8 @@ func NewFileRepository(filepath string) (*FileRepository, error) {
 	return repo, nil
 }
 
+// Get возвращает сокращённый URL по идентификатору.
+// Возвращает nil, nil, если запись не найдена.
 func (r *FileRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -51,6 +58,7 @@ func (r *FileRepository) Get(ctx context.Context, id string) (*model.ShortenURL,
 	return &shortenURL, nil
 }
 
+// GetList возвращает все активные (не удалённые) URL указанного пользователя.
 func (r *FileRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -67,6 +75,7 @@ func (r *FileRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model
 	return shortenURLs, nil
 }
 
+// GetDeletedList возвращает все мягко удалённые URL (используется CleanupService при старте).
 func (r *FileRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -81,6 +90,8 @@ func (r *FileRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL
 	return shortenURLs, nil
 }
 
+// Add сохраняет новый URL в память и дописывает его в файл.
+// Если ID уже существует, запись пропускается.
 func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -92,6 +103,8 @@ func (r *FileRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) 
 	return nil
 }
 
+// AddBatch сохраняет пакет URL за одну операцию блокировки.
+// Уже существующие ID пропускаются.
 func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -105,6 +118,8 @@ func (r *FileRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shor
 	return nil
 }
 
+// SoftDeleteBatch помечает URL пользователя как удалённые (Deleted = true) в памяти.
+// Файл не обновляется - физическое удаление производится через HardDeleteBatch.
 func (r *FileRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -118,6 +133,7 @@ func (r *FileRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, 
 	return nil
 }
 
+// HardDeleteBatch физически удаляет мягко удалённые URL из in-memory карты.
 func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -130,10 +146,12 @@ func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) erro
 	return nil
 }
 
+// Ping всегда возвращает nil - файловое хранилище всегда доступно.
 func (r *FileRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close закрывает файл хранилища.
 func (r *FileRepository) Close() {
 	r.file.Close()
 }

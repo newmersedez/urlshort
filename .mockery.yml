@@ -10,6 +10,7 @@ packages:
             Repository:
             ShortenerService:
             CleanupService:
+            AuditService:
     github.com/newmersedez/urlshort/internal/middleware:
         config:
             dir: "{{.InterfaceDir}}/mocks"

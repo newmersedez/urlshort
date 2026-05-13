@@ -12,14 +12,15 @@ import (
 	"github.com/newmersedez/urlshort/internal/model"
 )
 
-var (
-	ErrUniqueViolation = errors.New("record violates unique constraint")
-)
+// ErrUniqueViolation возвращается при попытке добавить URL с уже существующим идентификатором.
+var ErrUniqueViolation = errors.New("record violates unique constraint")
 
+// DBRepository реализует хранилище сокращённых URL в PostgreSQL.
 type DBRepository struct {
 	db *DB
 }
 
+// NewDBRepository создаёт DBRepository: запускает миграции и устанавливает пул соединений.
 func NewDBRepository(ctx context.Context, dsn string, logger *slog.Logger) (*DBRepository, error) {
 	db, err := newDB(ctx, dsn, logger)
 	if err != nil {
@@ -32,6 +33,8 @@ func NewDBRepository(ctx context.Context, dsn string, logger *slog.Logger) (*DBR
 	return repo, nil
 }
 
+// Get возвращает сокращённый URL по идентификатору.
+// Возвращает nil, nil, если запись не найдена.
 func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, error) {
 	row := r.db.pool.QueryRow(
 		ctx,
@@ -53,6 +56,7 @@ func (r *DBRepository) Get(ctx context.Context, id string) (*model.ShortenURL, e
 	return &url, nil
 }
 
+// GetList возвращает все активные (не удалённые) URL указанного пользователя.
 func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.ShortenURL, error) {
 	shortenURLs := make([]model.ShortenURL, 0)
 
@@ -85,6 +89,7 @@ func (r *DBRepository) GetList(ctx context.Context, userID uuid.UUID) ([]model.S
 	return shortenURLs, nil
 }
 
+// GetDeletedList возвращает все мягко удалённые URL (используется CleanupService при старте).
 func (r *DBRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, error) {
 	shortenURLs := make([]model.ShortenURL, 0)
 
@@ -116,6 +121,7 @@ func (r *DBRepository) GetDeletedList(ctx context.Context) ([]model.ShortenURL, 
 	return shortenURLs, nil
 }
 
+// Add сохраняет сокращённый URL. Возвращает ErrUniqueViolation, если ID уже существует.
 func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) error {
 	tag, err := r.db.pool.Exec(
 		ctx,
@@ -140,6 +146,7 @@ func (r *DBRepository) Add(ctx context.Context, shortenURL *model.ShortenURL) er
 	return nil
 }
 
+// AddBatch сохраняет пакет URL одним INSERT-запросом.
 func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.ShortenURL) error {
 	if len(shortenUrls) == 0 {
 		return nil
@@ -170,6 +177,7 @@ func (r *DBRepository) AddBatch(ctx context.Context, shortenUrls []*model.Shorte
 	return nil
 }
 
+// SoftDeleteBatch помечает URL пользователя как удалённые (is_deleted = true).
 func (r *DBRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error {
 	if len(ids) == 0 {
 		return nil
@@ -198,6 +206,7 @@ func (r *DBRepository) SoftDeleteBatch(ctx context.Context, userID uuid.UUID, id
 	return nil
 }
 
+// HardDeleteBatch физически удаляет мягко удалённые URL из базы данных.
 func (r *DBRepository) HardDeleteBatch(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
@@ -224,6 +233,7 @@ func (r *DBRepository) HardDeleteBatch(ctx context.Context, ids []string) error 
 	return nil
 }
 
+// Ping проверяет доступность базы данных.
 func (r *DBRepository) Ping(ctx context.Context) error {
 	if err := r.db.pool.Ping(ctx); err != nil {
 		return fmt.Errorf("failed to check DB availability: %w", err)
@@ -232,6 +242,7 @@ func (r *DBRepository) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close закрывает пул соединений к базе данных.
 func (r *DBRepository) Close() {
 	r.db.pool.Close()
 }

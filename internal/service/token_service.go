@@ -10,10 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// TokenService выпускает и проверяет токены аутентификации на основе AES-GCM.
+// Каждый экземпляр использует уникальный ключ, сгенерированный при создании.
 type TokenService struct {
 	aesgcm cipher.AEAD
 }
 
+// NewTokenService создаёт TokenService с новым случайным AES-GCM ключом.
+// Возвращает ошибку, если генерация ключа или инициализация шифра не удались.
 func NewTokenService() (*TokenService, error) {
 	key, err := generateRandom(2 * aes.BlockSize)
 	if err != nil {
@@ -35,6 +39,7 @@ func NewTokenService() (*TokenService, error) {
 	}, nil
 }
 
+// GetToken шифрует userID и возвращает hex-строку вида nonce+ciphertext.
 func (a *TokenService) GetToken(userID uuid.UUID) (string, error) {
 	nonce := make([]byte, a.aesgcm.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
@@ -49,6 +54,8 @@ func (a *TokenService) GetToken(userID uuid.UUID) (string, error) {
 	return hex.EncodeToString(token), nil
 }
 
+// GetUserID расшифровывает токен и возвращает userID.
+// Возвращает ошибку при некорректном формате, слишком коротком токене или ошибке расшифровки.
 func (a *TokenService) GetUserID(token string) (uuid.UUID, error) {
 	data, err := hex.DecodeString(token)
 	if err != nil {
@@ -76,6 +83,7 @@ func (a *TokenService) GetUserID(token string) (uuid.UUID, error) {
 	return userID, nil
 }
 
+// IsValid возвращает true, если токен можно успешно расшифровать.
 func (a *TokenService) IsValid(token string) bool {
 	_, err := a.GetUserID(token)
 	return err == nil
