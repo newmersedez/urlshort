@@ -261,6 +261,16 @@ type Skipped struct{ x int }
 	}
 }
 
+func TestProcessDir_ParseError(t *testing.T) {
+	dir := t.TempDir()
+	writeSrc(t, dir, "broken.go", `package foo
+
+this is not valid go code {{{
+`)
+	err := processDir(dir)
+	assert.Error(t, err, "processDir should return error on broken source")
+}
+
 func TestHasGenerateComment(t *testing.T) {
 	tests := []struct {
 		name     string

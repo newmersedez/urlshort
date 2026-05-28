@@ -83,7 +83,13 @@ func checkExitOutsideMain(pass *analysis.Pass, call *ast.CallExpr, stack []ast.N
 }
 
 func isForbiddenCall(pkg, fn string) bool {
-	return (pkg == "os" && fn == "Exit") || (pkg == "log" && fn == "Fatal")
+	if pkg == "os" && fn == "Exit" {
+		return true
+	}
+	if pkg == "log" && (fn == "Fatal" || fn == "Fatalf" || fn == "Fatalln") {
+		return true
+	}
+	return false
 }
 
 func enclosingFuncDecl(stack []ast.Node) *ast.FuncDecl {

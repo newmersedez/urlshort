@@ -53,7 +53,7 @@ func processDir(dir string) error {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
 	if err != nil {
-		return nil
+		return fmt.Errorf("parse %s: %w", dir, err)
 	}
 
 	for _, pkg := range pkgs {
