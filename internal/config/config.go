@@ -12,7 +12,7 @@ import (
 )
 
 // Config хранит параметры запуска сервиса.
-// Значения читаются из флагов CLI (-a, -b, -l, -f, -d) и переменных окружения.
+// Значения читаются из флагов CLI (-a, -b, -l, -f, -d, -s) и переменных окружения.
 type Config struct {
 	// ServerAddr - адрес и порт HTTP-сервера (например, "localhost:8080").
 	ServerAddr string `env:"SERVER_ADDRESS"`
@@ -28,6 +28,8 @@ type Config struct {
 	AuditFile string `env:"AUDIT_FILE"`
 	// AuditURL - URL удалённого сервера аудит-событий. Если пуст - HTTPAuditObserver не подключается.
 	AuditURL string `env:"AUDIT_URL"`
+	// EnableHTTPS - если true, сервер запускается с TLS через autocert (Let's Encrypt).
+	EnableHTTPS bool `env:"ENABLE_HTTPS"`
 }
 
 // NewConfig инициализирует Config: сначала парсит флаги CLI, затем переопределяет
@@ -42,6 +44,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database connection string")
 	flag.StringVar(&cfg.AuditFile, "audit-file", "", "Audit file path")
 	flag.StringVar(&cfg.AuditURL, "audit-url", "", "Audit remote server URL")
+	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "Enable HTTPS via Let's Encrypt autocert")
 	flag.Parse()
 
 	if err := env.Parse(&cfg); err != nil {

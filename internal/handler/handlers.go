@@ -130,11 +130,21 @@ func Serve(
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
+	go cleanupService.Start(ctx)
+
+	if cfg.EnableHTTPS {
+		server.TLSConfig = tlsConfigFor(cfg.ServerAddr)
+
+		if err = server.ListenAndServeTLS("", ""); err != nil {
+			return fmt.Errorf("failed to start the application: %w", err)
+		}
+
+		return nil
+	}
+
 	if err = server.ListenAndServe(); err != nil {
 		return fmt.Errorf("failed to start the application: %w", err)
 	}
-
-	go cleanupService.Start(ctx)
 
 	return nil
 }
