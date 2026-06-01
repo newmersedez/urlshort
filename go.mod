@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/tools v0.45.0
 )
 
 require (
@@ -15,6 +16,7 @@ require (
 	github.com/lib/pq v1.12.3 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 )
