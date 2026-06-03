@@ -42,7 +42,7 @@ type fileConfig struct {
 	DatabaseDSN     string `json:"database_dsn"`
 	AuditFile       string `json:"audit_file"`
 	AuditURL        string `json:"audit_url"`
-	EnableHTTPS     bool `json:"enable_https"`
+	EnableHTTPS     bool   `json:"enable_https"`
 }
 
 func NewConfig() (*Config, error) {

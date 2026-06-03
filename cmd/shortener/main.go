@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
@@ -81,7 +84,17 @@ func run() error {
 
 	defer repo.Close()
 
-	cleanupService := service.NewCleanupService(context.Background(), repo, log)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	go func() {
+		<-quit
+		cancel()
+	}()
+
+	cleanupService := service.NewCleanupService(ctx, repo, log)
 
 	auditService := service.NewAuditService(log)
 	if cfg.AuditFile != "" {
@@ -92,5 +105,5 @@ func run() error {
 	}
 
 	log.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(context.Background(), *cfg, repo, shortenerService, log, tokenService, cleanupService, auditService)
+	return handler.Serve(ctx, *cfg, repo, shortenerService, log, tokenService, cleanupService, auditService)
 }

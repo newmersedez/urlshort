@@ -257,29 +257,29 @@ func TestFileConfigLoading(t *testing.T) {
 	defer func() { os.Args = originalArgs }()
 
 	tests := []struct {
-		name           string
-		fileContent    string
-		flagName       string
-		envVar         string
-		expectedAddr   string
-		expectError    bool
+		name         string
+		fileContent  string
+		flagName     string
+		envVar       string
+		expectedAddr string
+		expectError  bool
 	}{
 		{
-			name: "Config loaded via -c flag",
-			fileContent: `{"server_address": "localhost:7777"}`,
-			flagName:    "-c",
+			name:         "Config loaded via -c flag",
+			fileContent:  `{"server_address": "localhost:7777"}`,
+			flagName:     "-c",
 			expectedAddr: "localhost:7777",
 		},
 		{
-			name: "Config loaded via -config flag",
-			fileContent: `{"server_address": "localhost:6666"}`,
-			flagName:    "-config",
+			name:         "Config loaded via -config flag",
+			fileContent:  `{"server_address": "localhost:6666"}`,
+			flagName:     "-config",
 			expectedAddr: "localhost:6666",
 		},
 		{
-			name: "Config loaded via CONFIG env var",
-			fileContent: `{"server_address": "localhost:5555"}`,
-			envVar:      "CONFIG",
+			name:         "Config loaded via CONFIG env var",
+			fileContent:  `{"server_address": "localhost:5555"}`,
+			envVar:       "CONFIG",
 			expectedAddr: "localhost:5555",
 		},
 		{

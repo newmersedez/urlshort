@@ -132,18 +132,28 @@ func Serve(
 
 	go cleanupService.Start(ctx)
 
-	if cfg.EnableHTTPS {
-		server.TLSConfig = tlsConfigFor(cfg.ServerAddr)
-
-		if err = server.ListenAndServeTLS("", ""); err != nil {
-			return fmt.Errorf("failed to start the application: %w", err)
+	serverErr := make(chan error, 1)
+	go func() {
+		if cfg.EnableHTTPS {
+			server.TLSConfig = tlsConfigFor(cfg.ServerAddr)
+			serverErr <- server.ListenAndServeTLS("", "")
+		} else {
+			serverErr <- server.ListenAndServe()
 		}
+	}()
 
-		return nil
-	}
-
-	if err = server.ListenAndServe(); err != nil {
-		return fmt.Errorf("failed to start the application: %w", err)
+	select {
+	case err = <-serverErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("server error: %w", err)
+		}
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err = server.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("graceful shutdown failed: %w", err)
+		}
+		logger.Info("Server stopped gracefully")
 	}
 
 	return nil
