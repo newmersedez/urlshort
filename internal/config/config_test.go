@@ -252,6 +252,137 @@ func TestFileStoragePathPriority(t *testing.T) {
 	}
 }
 
+func TestFileConfigLoading(t *testing.T) {
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	tests := []struct {
+		name           string
+		fileContent    string
+		flagName       string
+		envVar         string
+		expectedAddr   string
+		expectError    bool
+	}{
+		{
+			name: "Config loaded via -c flag",
+			fileContent: `{"server_address": "localhost:7777"}`,
+			flagName:    "-c",
+			expectedAddr: "localhost:7777",
+		},
+		{
+			name: "Config loaded via -config flag",
+			fileContent: `{"server_address": "localhost:6666"}`,
+			flagName:    "-config",
+			expectedAddr: "localhost:6666",
+		},
+		{
+			name: "Config loaded via CONFIG env var",
+			fileContent: `{"server_address": "localhost:5555"}`,
+			envVar:      "CONFIG",
+			expectedAddr: "localhost:5555",
+		},
+		{
+			name:        "Error when config file does not exist",
+			flagName:    "-c",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var configPath string
+
+			if tt.fileContent != "" {
+				f, err := os.CreateTemp("", "config-*.json")
+				require.NoError(t, err)
+				defer os.Remove(f.Name())
+				_, err = f.WriteString(tt.fileContent)
+				require.NoError(t, err)
+				f.Close()
+				configPath = f.Name()
+			} else {
+				configPath = "/nonexistent/config.json"
+			}
+
+			if tt.envVar != "" {
+				t.Setenv(tt.envVar, configPath)
+				os.Args = []string{"cmd"}
+			} else {
+				os.Args = []string{"cmd", tt.flagName, configPath}
+			}
+
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg, err := NewConfig()
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedAddr, cfg.ServerAddr)
+		})
+	}
+}
+
+func TestFileConfigPriority(t *testing.T) {
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	f, err := os.CreateTemp("", "config-*.json")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	_, err = f.WriteString(`{"server_address": "localhost:7777", "base_url": "http://localhost:7777"}`)
+	require.NoError(t, err)
+	f.Close()
+
+	tests := []struct {
+		name         string
+		envVars      map[string]string
+		flagArgs     []string
+		expectedAddr string
+	}{
+		{
+			name:         "File value is used when no flag and no env",
+			envVars:      map[string]string{},
+			flagArgs:     []string{"-c", f.Name()},
+			expectedAddr: "localhost:7777",
+		},
+		{
+			name:         "Flag value overrides file value",
+			envVars:      map[string]string{},
+			flagArgs:     []string{"-c", f.Name(), "-a", "localhost:8888"},
+			expectedAddr: "localhost:8888",
+		},
+		{
+			name: "Env value overrides file value",
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost:9999",
+			},
+			flagArgs:     []string{"-c", f.Name()},
+			expectedAddr: "localhost:9999",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key := range tt.envVars {
+				os.Unsetenv(key)
+			}
+			for key, value := range tt.envVars {
+				t.Setenv(key, value)
+			}
+
+			os.Args = append([]string{"cmd"}, tt.flagArgs...)
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg, err := NewConfig()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedAddr, cfg.ServerAddr)
+		})
+	}
+}
+
 func TestDatabaseDSNPriority(t *testing.T) {
 	originalArgs := os.Args
 	defer func() { os.Args = originalArgs }()
