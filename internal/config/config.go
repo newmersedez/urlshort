@@ -45,6 +45,8 @@ type fileConfig struct {
 	EnableHTTPS     bool   `json:"enable_https"`
 }
 
+// NewConfig инициализирует Config: сначала парсит флаги CLI, затем переопределяет
+// значения переменными окружения. Возвращает ошибку при проблемах с env-парсингом.
 func NewConfig() (*Config, error) {
 	cfg := Config{}
 
