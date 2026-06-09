@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"dario.cat/mergo"
 	"github.com/caarlos0/env/v11"
 )
 
@@ -78,7 +79,9 @@ func NewConfig() (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		applyFileConfig(&cfg, fc)
+		if err := applyFileConfig(&cfg, fc); err != nil {
+			return nil, fmt.Errorf("failed to apply file config: %w", err)
+		}
 	}
 
 	if err := env.Parse(&cfg); err != nil {
@@ -102,35 +105,49 @@ func loadFileConfig(path string) (*fileConfig, error) {
 	return &fc, nil
 }
 
-func applyFileConfig(cfg *Config, fc *fileConfig) {
+func applyFileConfig(cfg *Config, fc *fileConfig) error {
 	set := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { set[f.Name] = true })
 
-	if !set["a"] && fc.ServerAddr != "" {
-		cfg.ServerAddr = fc.ServerAddr
+	fromFile := Config{
+		ServerAddr:      fc.ServerAddr,
+		BaseURL:         fc.BaseURL,
+		LogLevel:        fc.LogLevel,
+		FileStoragePath: fc.FileStoragePath,
+		DatabaseDSN:     fc.DatabaseDSN,
+		AuditFile:       fc.AuditFile,
+		AuditURL:        fc.AuditURL,
+		EnableHTTPS:     fc.EnableHTTPS,
+		TLSCertCacheDir: fc.TLSCertCacheDir,
 	}
-	if !set["b"] && fc.BaseURL != "" {
-		cfg.BaseURL = fc.BaseURL
+
+	if set["a"] {
+		fromFile.ServerAddr = ""
 	}
-	if !set["l"] && fc.LogLevel != "" {
-		cfg.LogLevel = fc.LogLevel
+	if set["b"] {
+		fromFile.BaseURL = ""
 	}
-	if !set["f"] && fc.FileStoragePath != "" {
-		cfg.FileStoragePath = fc.FileStoragePath
+	if set["l"] {
+		fromFile.LogLevel = ""
 	}
-	if !set["d"] && fc.DatabaseDSN != "" {
-		cfg.DatabaseDSN = fc.DatabaseDSN
+	if set["f"] {
+		fromFile.FileStoragePath = ""
 	}
-	if !set["audit-file"] && fc.AuditFile != "" {
-		cfg.AuditFile = fc.AuditFile
+	if set["d"] {
+		fromFile.DatabaseDSN = ""
 	}
-	if !set["audit-url"] && fc.AuditURL != "" {
-		cfg.AuditURL = fc.AuditURL
+	if set["audit-file"] {
+		fromFile.AuditFile = ""
 	}
-	if !set["s"] && fc.EnableHTTPS {
-		cfg.EnableHTTPS = fc.EnableHTTPS
+	if set["audit-url"] {
+		fromFile.AuditURL = ""
 	}
-	if !set["tls-cache-dir"] && fc.TLSCertCacheDir != "" {
-		cfg.TLSCertCacheDir = fc.TLSCertCacheDir
+	if set["s"] {
+		fromFile.EnableHTTPS = false
 	}
+	if set["tls-cache-dir"] {
+		fromFile.TLSCertCacheDir = ""
+	}
+
+	return mergo.Merge(cfg, fromFile, mergo.WithOverride)
 }
