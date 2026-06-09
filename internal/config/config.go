@@ -32,6 +32,8 @@ type Config struct {
 	AuditURL string `env:"AUDIT_URL"`
 	// EnableHTTPS - если true, сервер запускается с TLS через autocert (Let's Encrypt).
 	EnableHTTPS bool `env:"ENABLE_HTTPS"`
+	// TLSCertCacheDir - директория для кэша TLS-сертификатов Let's Encrypt.
+	TLSCertCacheDir string `env:"TLS_CERT_CACHE_DIR"`
 }
 
 type fileConfig struct {
@@ -43,6 +45,7 @@ type fileConfig struct {
 	AuditFile       string `json:"audit_file"`
 	AuditURL        string `json:"audit_url"`
 	EnableHTTPS     bool   `json:"enable_https"`
+	TLSCertCacheDir string `json:"tls_cert_cache_dir"`
 }
 
 // NewConfig инициализирует Config: сначала парсит флаги CLI, затем переопределяет
@@ -61,10 +64,13 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.AuditFile, "audit-file", "", "Audit file path")
 	flag.StringVar(&cfg.AuditURL, "audit-url", "", "Audit remote server URL")
 	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "Enable HTTPS via Let's Encrypt autocert")
+	flag.StringVar(&cfg.TLSCertCacheDir, "tls-cache-dir", "", "Directory for TLS certificate cache")
 	flag.Parse()
 
 	if configPath == "" {
-		configPath = os.Getenv("CONFIG")
+		if v, ok := os.LookupEnv("CONFIG"); ok {
+			configPath = v
+		}
 	}
 
 	if configPath != "" {
@@ -123,5 +129,8 @@ func applyFileConfig(cfg *Config, fc *fileConfig) {
 	}
 	if !set["s"] && fc.EnableHTTPS {
 		cfg.EnableHTTPS = fc.EnableHTTPS
+	}
+	if !set["tls-cache-dir"] && fc.TLSCertCacheDir != "" {
+		cfg.TLSCertCacheDir = fc.TLSCertCacheDir
 	}
 }

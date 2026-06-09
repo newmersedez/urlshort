@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/newmersedez/urlshort/internal/config"
 	"github.com/newmersedez/urlshort/internal/handler"
@@ -18,6 +22,11 @@ import (
 var buildVersion string
 var buildDate string
 var buildCommit string
+
+const (
+	timeoutServerShutdown = time.Second * 5
+	timeoutShutdown       = time.Second * 10
+)
 
 func printBuildInfo() {
 	version := buildVersion
@@ -44,16 +53,29 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (err error) {
 	cfg, err := config.NewConfig()
 	if err != nil {
 		return fmt.Errorf("failed to initialize config object: %w", err)
 	}
 
-	log, err := logger.NewLogger(cfg.LogLevel)
+	appLog, err := logger.NewLogger(cfg.LogLevel)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger object: %w", err)
 	}
+
+	rootCtx, cancelCtx := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer cancelCtx()
+
+	g, ctx := errgroup.WithContext(rootCtx)
+
+	context.AfterFunc(ctx, func() {
+		ctx, cancelCtx := context.WithTimeout(context.Background(), timeoutShutdown)
+		defer cancelCtx()
+
+		<-ctx.Done()
+		log.Fatal("failed to gracefully shutdown the service")
+	})
 
 	tokenService, err := service.NewTokenService()
 	if err != nil {
@@ -66,7 +88,7 @@ func run() error {
 
 	switch {
 	case cfg.DatabaseDSN != "":
-		repo, err = repository.NewDBRepository(context.Background(), cfg.DatabaseDSN, log)
+		repo, err = repository.NewDBRepository(ctx, cfg.DatabaseDSN, appLog)
 		if err != nil {
 			return fmt.Errorf("failed to initialize db repository object: %w", err)
 		}
@@ -82,21 +104,21 @@ func run() error {
 		}
 	}
 
-	defer repo.Close()
+	g.Go(func() error {
+		defer appLog.Info("repository closed")
+		<-ctx.Done()
+		repo.Close()
+		return nil
+	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cleanupService := service.NewCleanupService(ctx, repo, appLog)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	go func() {
-		<-quit
-		cancel()
-	}()
+	g.Go(func() error {
+		cleanupService.Start(ctx)
+		return nil
+	})
 
-	cleanupService := service.NewCleanupService(ctx, repo, log)
-
-	auditService := service.NewAuditService(log)
+	auditService := service.NewAuditService(appLog)
 	if cfg.AuditFile != "" {
 		auditService.Subscribe(service.NewFileAuditObserver(cfg.AuditFile))
 	}
@@ -104,6 +126,41 @@ func run() error {
 		auditService.Subscribe(service.NewHTTPAuditObserver(cfg.AuditURL))
 	}
 
-	log.Info("Starting server", "address", cfg.ServerAddr)
-	return handler.Serve(ctx, *cfg, repo, shortenerService, log, tokenService, cleanupService, auditService)
+	server, err := handler.Serve(*cfg, repo, shortenerService, appLog, tokenService, cleanupService, auditService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize server: %w", err)
+	}
+
+	g.Go(func() (err error) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("a panic occurred: %v", rec)
+			}
+		}()
+		appLog.Info("Starting server", "address", cfg.ServerAddr)
+		if cfg.EnableHTTPS {
+			err = server.ListenAndServeTLS("", "")
+		} else {
+			err = server.ListenAndServe()
+		}
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("listen and serve has failed: %w", err)
+	})
+
+	g.Go(func() error {
+		defer appLog.Info("server has been shutdown")
+		<-ctx.Done()
+
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), timeoutServerShutdown)
+		defer cancelShutdown()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			appLog.Error("an error occurred during server shutdown", "error", err)
+		}
+		return nil
+	})
+
+	return g.Wait()
 }

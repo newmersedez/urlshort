@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -109,54 +110,36 @@ type handlers struct {
 	auditService     AuditService
 }
 
-// Serve настраивает маршруты и запускает HTTP-сервер по адресу cfg.ServerAddr.
-// Функция блокирует выполнение до тех пор, пока сервер не остановится.
+// Serve создаёт и настраивает HTTP-сервер. Не запускает его — вызывающий код
+// отвечает за запуск (ListenAndServe) и остановку (Shutdown).
 func Serve(
-	ctx context.Context,
 	cfg config.Config,
 	store Repository,
 	shortener ShortenerService,
 	logger *slog.Logger,
 	tokenService TokenService,
 	cleanupService CleanupService,
-	auditService AuditService) error {
+	auditService AuditService) (*http.Server, error) {
 	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService, auditService)
 	if err != nil {
-		return fmt.Errorf("failed to initialize handlers object: %w", err)
+		return nil, fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
 
 	server, err := newServer(cfg.ServerAddr, newRouter(handler))
 	if err != nil {
-		return fmt.Errorf("failed to initialize server: %w", err)
+		return nil, fmt.Errorf("failed to initialize server: %w", err)
 	}
 
-	go cleanupService.Start(ctx)
-
-	serverErr := make(chan error, 1)
-	go func() {
-		if cfg.EnableHTTPS {
-			server.TLSConfig = tlsConfigFor(cfg.ServerAddr)
-			serverErr <- server.ListenAndServeTLS("", "")
-		} else {
-			serverErr <- server.ListenAndServe()
+	if cfg.EnableHTTPS {
+		host, _, _ := net.SplitHostPort(cfg.ServerAddr)
+		tlsCfg, err := tlsConfigFor(host, cfg.TLSCertCacheDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to configure TLS: %w", err)
 		}
-	}()
-
-	select {
-	case err = <-serverErr:
-		if !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("server error: %w", err)
-		}
-	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err = server.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("graceful shutdown failed: %w", err)
-		}
-		logger.Info("Server stopped gracefully")
+		server.TLSConfig = tlsCfg
 	}
 
-	return nil
+	return server, nil
 }
 
 // NewHandler создаёт http.Handler со всеми маршрутами сервиса.
