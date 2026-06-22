@@ -26,6 +26,7 @@ type Config struct {
 	AuditURL        string `env:"AUDIT_URL"          json:"audit_url"`
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS"       json:"enable_https"`
 	TLSCertCacheDir string `env:"TLS_CERT_CACHE_DIR" json:"tls_cert_cache_dir"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET"     json:"trusted_subnet"`
 }
 
 func NewConfig() (*Config, error) {
@@ -76,6 +77,7 @@ func parseFlags() {
 	flag.String("audit-url", "", "Audit remote server URL")
 	flag.Bool("s", false, "Enable HTTPS via Let's Encrypt autocert")
 	flag.String("tls-cache-dir", "", "Directory for TLS certificate cache")
+	flag.String("t", "", "Trusted subnet in CIDR notation")
 	flag.Parse()
 }
 
@@ -105,6 +107,8 @@ func applyFlag(cfg *Config, f *flag.Flag) {
 		cfg.EnableHTTPS = f.Value.String() == "true"
 	case "tls-cache-dir":
 		cfg.TLSCertCacheDir = f.Value.String()
+	case "t":
+		cfg.TrustedSubnet = f.Value.String()
 	}
 }
 

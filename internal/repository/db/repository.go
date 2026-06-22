@@ -233,6 +233,16 @@ func (r *DBRepository) HardDeleteBatch(ctx context.Context, ids []string) error 
 	return nil
 }
 
+// Stats возвращает количество сокращённых URL и уникальных пользователей.
+func (r *DBRepository) Stats(ctx context.Context) (urls int, users int, err error) {
+	row := r.db.pool.QueryRow(ctx,
+		`SELECT COUNT(*), COUNT(DISTINCT user_id) FROM shorten_urls`)
+	if err = row.Scan(&urls, &users); err != nil {
+		return 0, 0, fmt.Errorf("failed to get stats: %w", err)
+	}
+	return urls, users, nil
+}
+
 // Ping проверяет доступность базы данных.
 func (r *DBRepository) Ping(ctx context.Context) error {
 	if err := r.db.pool.Ping(ctx); err != nil {

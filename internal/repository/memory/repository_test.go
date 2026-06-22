@@ -76,3 +76,35 @@ func TestGetList(t *testing.T) {
 	require.Equal(t, shortenURL.OriginalValue, val[0].OriginalValue)
 	require.Equal(t, shortenURL.CreatedAt, val[0].CreatedAt)
 }
+
+func TestStats(t *testing.T) {
+	// Arrange
+	user1 := uuid.New()
+	user2 := uuid.New()
+
+	repo, _ := NewMemoryRepository()
+	repo.Add(t.Context(), model.NewShortenURL(user1, "id1", "https://example.com/1"))
+	repo.Add(t.Context(), model.NewShortenURL(user1, "id2", "https://example.com/2"))
+	repo.Add(t.Context(), model.NewShortenURL(user2, "id3", "https://example.com/3"))
+
+	// Act
+	urls, users, err := repo.Stats(t.Context())
+
+	// Assert
+	require.NoError(t, err)
+	require.Equal(t, 3, urls)
+	require.Equal(t, 2, users)
+}
+
+func TestStatsEmpty(t *testing.T) {
+	// Arrange
+	repo, _ := NewMemoryRepository()
+
+	// Act
+	urls, users, err := repo.Stats(t.Context())
+
+	// Assert
+	require.NoError(t, err)
+	require.Equal(t, 0, urls)
+	require.Equal(t, 0, users)
+}
