@@ -17,7 +17,6 @@ func TestNewConfig(t *testing.T) {
 		"-l", "info",
 		"-f", "file.json",
 		"-d", "host=localhost user=postgres password=1234 dbname=urlshort sslmode=disable"}
-	flag.CommandLine.Parse(os.Args[1:])
 
 	_, err := NewConfig()
 
@@ -35,7 +34,7 @@ func TestServerAddressPriority(t *testing.T) {
 		expectedResult string
 	}{
 		{
-			name: "Environment value has priority if set",
+			name: "Environment has priority over flag",
 			envVars: map[string]string{
 				"SERVER_ADDRESS": "localhost:9999",
 			},
@@ -43,13 +42,13 @@ func TestServerAddressPriority(t *testing.T) {
 			expectedResult: "localhost:9999",
 		},
 		{
-			name:           "Flag value has priority if environment value is not set",
+			name:           "Flag is used when env is not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{"-a", "localhost:8888"},
 			expectedResult: "localhost:8888",
 		},
 		{
-			name:           "Default value if flag and value are not set",
+			name:           "Default value if flag and env are not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{},
 			expectedResult: "localhost:8080",
@@ -61,7 +60,6 @@ func TestServerAddressPriority(t *testing.T) {
 			for key := range tt.envVars {
 				os.Unsetenv(key)
 			}
-
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
 			}
@@ -92,7 +90,7 @@ func TestBaseURLPriority(t *testing.T) {
 		expectedResult string
 	}{
 		{
-			name: "Environment value has priority if set",
+			name: "Environment has priority over flag",
 			envVars: map[string]string{
 				"BASE_URL": "http://localhost:9999",
 			},
@@ -100,13 +98,13 @@ func TestBaseURLPriority(t *testing.T) {
 			expectedResult: "http://localhost:9999",
 		},
 		{
-			name:           "Flag value has priority if environment value is not set",
+			name:           "Flag is used when env is not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{"-b", "http://localhost:8888"},
 			expectedResult: "http://localhost:8888",
 		},
 		{
-			name:           "Default value if flag and value are not set",
+			name:           "Default value if flag and env are not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{},
 			expectedResult: "http://localhost:8080",
@@ -118,7 +116,6 @@ func TestBaseURLPriority(t *testing.T) {
 			for key := range tt.envVars {
 				os.Unsetenv(key)
 			}
-
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
 			}
@@ -149,7 +146,7 @@ func TestLogLevelPriority(t *testing.T) {
 		expectedResult string
 	}{
 		{
-			name: "Environment value has priority if set",
+			name: "Environment has priority over flag",
 			envVars: map[string]string{
 				"LOG_LEVEL": "warn",
 			},
@@ -157,13 +154,13 @@ func TestLogLevelPriority(t *testing.T) {
 			expectedResult: "warn",
 		},
 		{
-			name:           "Flag value has priority if environment value is not set",
+			name:           "Flag is used when env is not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{"-l", "warn"},
 			expectedResult: "warn",
 		},
 		{
-			name:           "Default value if flag and value are not set",
+			name:           "Default value if flag and env are not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{},
 			expectedResult: "info",
@@ -175,7 +172,6 @@ func TestLogLevelPriority(t *testing.T) {
 			for key := range tt.envVars {
 				os.Unsetenv(key)
 			}
-
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
 			}
@@ -206,7 +202,7 @@ func TestFileStoragePathPriority(t *testing.T) {
 		expectedResult string
 	}{
 		{
-			name: "Environment value has priority if set",
+			name: "Environment has priority over flag",
 			envVars: map[string]string{
 				"FILE_STORAGE_PATH": "priority.json",
 			},
@@ -214,13 +210,13 @@ func TestFileStoragePathPriority(t *testing.T) {
 			expectedResult: "priority.json",
 		},
 		{
-			name:           "Flag value has priority if environment value is not set",
+			name:           "Flag is used when env is not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{"-f", "priority.json"},
 			expectedResult: "priority.json",
 		},
 		{
-			name:           "Default value if flag and value are not set",
+			name:           "Default value if flag and env are not set",
 			envVars:        map[string]string{},
 			flagArgs:       []string{},
 			expectedResult: filepath.Join(os.TempDir(), "storage.json"),
@@ -232,7 +228,6 @@ func TestFileStoragePathPriority(t *testing.T) {
 			for key := range tt.envVars {
 				os.Unsetenv(key)
 			}
-
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
 			}
@@ -252,6 +247,137 @@ func TestFileStoragePathPriority(t *testing.T) {
 	}
 }
 
+func TestFileConfigLoading(t *testing.T) {
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	tests := []struct {
+		name         string
+		fileContent  string
+		flagName     string
+		envVar       string
+		expectedAddr string
+		expectError  bool
+	}{
+		{
+			name:         "Config loaded via -c flag",
+			fileContent:  `{"server_address": "localhost:7777"}`,
+			flagName:     "-c",
+			expectedAddr: "localhost:7777",
+		},
+		{
+			name:         "Config loaded via -config flag",
+			fileContent:  `{"server_address": "localhost:6666"}`,
+			flagName:     "-config",
+			expectedAddr: "localhost:6666",
+		},
+		{
+			name:         "Config loaded via CONFIG env var",
+			fileContent:  `{"server_address": "localhost:5555"}`,
+			envVar:       "CONFIG",
+			expectedAddr: "localhost:5555",
+		},
+		{
+			name:        "Error when config file does not exist",
+			flagName:    "-c",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var configPath string
+
+			if tt.fileContent != "" {
+				f, err := os.CreateTemp("", "config-*.json")
+				require.NoError(t, err)
+				defer os.Remove(f.Name())
+				_, err = f.WriteString(tt.fileContent)
+				require.NoError(t, err)
+				f.Close()
+				configPath = f.Name()
+			} else {
+				configPath = "/nonexistent/config.json"
+			}
+
+			if tt.envVar != "" {
+				t.Setenv(tt.envVar, configPath)
+				os.Args = []string{"cmd"}
+			} else {
+				os.Args = []string{"cmd", tt.flagName, configPath}
+			}
+
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg, err := NewConfig()
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedAddr, cfg.ServerAddr)
+		})
+	}
+}
+
+func TestFileConfigPriority(t *testing.T) {
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	f, err := os.CreateTemp("", "config-*.json")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	_, err = f.WriteString(`{"server_address": "localhost:7777", "base_url": "http://localhost:7777"}`)
+	require.NoError(t, err)
+	f.Close()
+
+	tests := []struct {
+		name         string
+		envVars      map[string]string
+		flagArgs     []string
+		expectedAddr string
+	}{
+		{
+			name:         "File value is used when no flag and no env",
+			envVars:      map[string]string{},
+			flagArgs:     []string{"-c", f.Name()},
+			expectedAddr: "localhost:7777",
+		},
+		{
+			name:         "Flag overrides file value",
+			envVars:      map[string]string{},
+			flagArgs:     []string{"-c", f.Name(), "-a", "localhost:8888"},
+			expectedAddr: "localhost:8888",
+		},
+		{
+			name: "Env overrides file value",
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost:9999",
+			},
+			flagArgs:     []string{"-c", f.Name()},
+			expectedAddr: "localhost:9999",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key := range tt.envVars {
+				os.Unsetenv(key)
+			}
+			for key, value := range tt.envVars {
+				t.Setenv(key, value)
+			}
+
+			os.Args = append([]string{"cmd"}, tt.flagArgs...)
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg, err := NewConfig()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedAddr, cfg.ServerAddr)
+		})
+	}
+}
+
 func TestDatabaseDSNPriority(t *testing.T) {
 	originalArgs := os.Args
 	defer func() { os.Args = originalArgs }()
@@ -264,7 +390,7 @@ func TestDatabaseDSNPriority(t *testing.T) {
 		expectedResult string
 	}{
 		{
-			name: "Environment variable has priority",
+			name: "Environment has priority over flag",
 			envVars: map[string]string{
 				"DATABASE_DSN": "env-dsn-value",
 			},
@@ -293,7 +419,6 @@ func TestDatabaseDSNPriority(t *testing.T) {
 			for key := range tt.envVars {
 				os.Unsetenv(key)
 			}
-
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
 			}

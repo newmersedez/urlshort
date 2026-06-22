@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -109,34 +110,36 @@ type handlers struct {
 	auditService     AuditService
 }
 
-// Serve настраивает маршруты и запускает HTTP-сервер по адресу cfg.ServerAddr.
-// Функция блокирует выполнение до тех пор, пока сервер не остановится.
+// Serve создаёт и настраивает HTTP-сервер. Не запускает его — вызывающий код
+// отвечает за запуск (ListenAndServe) и остановку (Shutdown).
 func Serve(
-	ctx context.Context,
 	cfg config.Config,
 	store Repository,
 	shortener ShortenerService,
 	logger *slog.Logger,
 	tokenService TokenService,
 	cleanupService CleanupService,
-	auditService AuditService) error {
+	auditService AuditService) (*http.Server, error) {
 	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService, auditService)
 	if err != nil {
-		return fmt.Errorf("failed to initialize handlers object: %w", err)
+		return nil, fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
 
 	server, err := newServer(cfg.ServerAddr, newRouter(handler))
 	if err != nil {
-		return fmt.Errorf("failed to initialize server: %w", err)
+		return nil, fmt.Errorf("failed to initialize server: %w", err)
 	}
 
-	if err = server.ListenAndServe(); err != nil {
-		return fmt.Errorf("failed to start the application: %w", err)
+	if cfg.EnableHTTPS {
+		host, _, _ := net.SplitHostPort(cfg.ServerAddr)
+		tlsCfg, err := tlsConfigFor(host, cfg.TLSCertCacheDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to configure TLS: %w", err)
+		}
+		server.TLSConfig = tlsCfg
 	}
 
-	go cleanupService.Start(ctx)
-
-	return nil
+	return server, nil
 }
 
 // NewHandler создаёт http.Handler со всеми маршрутами сервиса.
