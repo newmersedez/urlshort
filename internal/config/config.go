@@ -27,6 +27,7 @@ type Config struct {
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS"       json:"enable_https"`
 	TLSCertCacheDir string `env:"TLS_CERT_CACHE_DIR" json:"tls_cert_cache_dir"`
 	TrustedSubnet   string `env:"TRUSTED_SUBNET"     json:"trusted_subnet"`
+	GRPCAddr        string `env:"GRPC_ADDRESS"       json:"grpc_address"`
 }
 
 func NewConfig() (*Config, error) {
@@ -78,6 +79,7 @@ func parseFlags() {
 	flag.Bool("s", false, "Enable HTTPS via Let's Encrypt autocert")
 	flag.String("tls-cache-dir", "", "Directory for TLS certificate cache")
 	flag.String("t", "", "Trusted subnet in CIDR notation")
+	flag.String("g", "localhost:3200", "gRPC server address")
 	flag.Parse()
 }
 
@@ -109,6 +111,8 @@ func applyFlag(cfg *Config, f *flag.Flag) {
 		cfg.TLSCertCacheDir = f.Value.String()
 	case "t":
 		cfg.TrustedSubnet = f.Value.String()
+	case "g":
+		cfg.GRPCAddr = f.Value.String()
 	}
 }
 
