@@ -146,6 +146,18 @@ func (r *FileRepository) HardDeleteBatch(ctx context.Context, ids []string) erro
 	return nil
 }
 
+// Stats возвращает количество сокращённых URL и уникальных пользователей.
+func (r *FileRepository) Stats(ctx context.Context) (urls int, users int, err error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	uniqueUsers := make(map[uuid.UUID]struct{})
+	for _, item := range r.items {
+		uniqueUsers[item.UserID] = struct{}{}
+	}
+	return len(r.items), len(uniqueUsers), nil
+}
+
 // Ping всегда возвращает nil - файловое хранилище всегда доступно.
 func (r *FileRepository) Ping(ctx context.Context) error {
 	return nil

@@ -437,3 +437,57 @@ func TestDatabaseDSNPriority(t *testing.T) {
 		})
 	}
 }
+
+func TestTrustedSubnetPriority(t *testing.T) {
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	tests := []struct {
+		name           string
+		envVars        map[string]string
+		flagArgs       []string
+		expectedResult string
+	}{
+		{
+			name:           "Environment has priority over flag",
+			envVars:        map[string]string{"TRUSTED_SUBNET": "10.0.0.0/8"},
+			flagArgs:       []string{"-t", "192.168.1.0/24"},
+			expectedResult: "10.0.0.0/8",
+		},
+		{
+			name:           "Flag is used when env is not set",
+			envVars:        map[string]string{},
+			flagArgs:       []string{"-t", "192.168.1.0/24"},
+			expectedResult: "192.168.1.0/24",
+		},
+		{
+			name:           "Empty when flag and env are not set",
+			envVars:        map[string]string{},
+			flagArgs:       []string{},
+			expectedResult: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key := range tt.envVars {
+				os.Unsetenv(key)
+			}
+			for key, value := range tt.envVars {
+				t.Setenv(key, value)
+			}
+
+			if len(tt.flagArgs) > 0 {
+				os.Args = append([]string{"cmd"}, tt.flagArgs...)
+			} else {
+				os.Args = []string{"cmd"}
+			}
+
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg, err := NewConfig()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedResult, cfg.TrustedSubnet)
+		})
+	}
+}
