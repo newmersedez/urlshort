@@ -40,6 +40,8 @@ type Repository interface {
 	SoftDeleteBatch(ctx context.Context, userID uuid.UUID, ids []string) error
 	// HardDeleteBatch физически удаляет URL из хранилища.
 	HardDeleteBatch(ctx context.Context, ids []string) error
+	// Stats возвращает количество сокращённых URL и уникальных пользователей.
+	Stats(ctx context.Context) (urls int, users int, err error)
 	// Ping проверяет доступность хранилища.
 	Ping(ctx context.Context) error
 	// Close освобождает ресурсы хранилища.
@@ -100,8 +102,14 @@ type urlListResponse struct {
 	OriginalURL string `json:"original_url"`
 }
 
+type statsResponse struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}
+
 type handlers struct {
 	baseURL          string
+	trustedSubnet    *net.IPNet
 	store            Repository
 	logger           *slog.Logger
 	shortenerService ShortenerService
@@ -120,7 +128,16 @@ func Serve(
 	tokenService TokenService,
 	cleanupService CleanupService,
 	auditService AuditService) (*http.Server, error) {
-	handler, err := newHandlers(cfg.BaseURL, store, logger, shortener, tokenService, cleanupService, auditService)
+	var trustedSubnet *net.IPNet
+	if cfg.TrustedSubnet != "" {
+		var err error
+		_, trustedSubnet, err = net.ParseCIDR(cfg.TrustedSubnet)
+		if err != nil {
+			return nil, fmt.Errorf("invalid trusted_subnet %q: %w", cfg.TrustedSubnet, err)
+		}
+	}
+
+	handler, err := newHandlers(cfg.BaseURL, trustedSubnet, store, logger, shortener, tokenService, cleanupService, auditService)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize handlers object: %w", err)
 	}
@@ -152,7 +169,7 @@ func NewHandler(
 	tokenService TokenService,
 	cleanupService CleanupService,
 	auditService AuditService) (http.Handler, error) {
-	h, err := newHandlers(baseURL, store, logger, shortener, tokenService, cleanupService, auditService)
+	h, err := newHandlers(baseURL, nil, store, logger, shortener, tokenService, cleanupService, auditService)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize handlers: %w", err)
 	}
@@ -161,6 +178,7 @@ func NewHandler(
 
 func newHandlers(
 	baseURL string,
+	trustedSubnet *net.IPNet,
 	store Repository,
 	logger *slog.Logger,
 	shortenerService ShortenerService,
@@ -169,6 +187,7 @@ func newHandlers(
 	auditService AuditService) (*handlers, error) {
 	handlers := &handlers{
 		baseURL:          strings.TrimRight(baseURL, "/") + "/",
+		trustedSubnet:    trustedSubnet,
 		store:            store,
 		shortenerService: shortenerService,
 		logger:           logger,
@@ -186,6 +205,11 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Use(middleware.RequestLoggerMiddleware(handler.logger))
 	router.Use(middleware.RequestCompressorMiddleware(handler.logger))
 	router.Use(middleware.AuthorizationMiddleware(handler.tokenService, handler.logger))
+
+	router.Group(func(r chi.Router) {
+		r.Use(middleware.TrustedSubnetMiddleware(handler.trustedSubnet))
+		r.Get("/api/internal/stats", handler.getStatsHandle)
+	})
 
 	router.Get("/api/user/urls", handler.GetURLsHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
@@ -519,4 +543,20 @@ func (h *handlers) deleteURLsHandle(w http.ResponseWriter, r *http.Request) {
 	h.cleanupService.ScheduleDelete(r.Context(), userID, ids)
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// getStatsHandle обрабатывает GET /api/internal/stats.
+func (h *handlers) getStatsHandle(w http.ResponseWriter, r *http.Request) {
+	urls, users, err := h.store.Stats(r.Context())
+	if err != nil {
+		h.logger.Error("failed to get stats", "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(statsResponse{URLs: urls, Users: users}); err != nil {
+		h.logger.Error("failed to write stats response", "error", err)
+	}
 }

@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/newmersedez/urlshort/internal/config"
+	grpchandler "github.com/newmersedez/urlshort/internal/grpc/handler"
 	"github.com/newmersedez/urlshort/internal/handler"
 	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
@@ -131,13 +132,23 @@ func run() (err error) {
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
+	grpcServer := grpchandler.NewShortenerServer(cfg.BaseURL, repo, shortenerService, tokenService, appLog)
+
+	g.Go(func() error {
+		appLog.Info("Starting gRPC server", "address", cfg.GRPCAddr)
+		if err := grpchandler.Serve(ctx, grpcServer, cfg.GRPCAddr); err != nil {
+			return fmt.Errorf("grpc server failed: %w", err)
+		}
+		return nil
+	})
+
 	g.Go(func() (err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				err = fmt.Errorf("a panic occurred: %v", rec)
 			}
 		}()
-		appLog.Info("Starting server", "address", cfg.ServerAddr)
+		appLog.Info("Starting HTTP server", "address", cfg.ServerAddr)
 		if cfg.EnableHTTPS {
 			err = server.ListenAndServeTLS("", "")
 		} else {

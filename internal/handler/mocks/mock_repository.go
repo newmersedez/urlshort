@@ -554,3 +554,69 @@ func (_c *MockRepository_SoftDeleteBatch_Call) RunAndReturn(run func(ctx context
 	_c.Call.Return(run)
 	return _c
 }
+
+// Stats provides a mock function for the type MockRepository
+func (_mock *MockRepository) Stats(ctx context.Context) (int, int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Stats")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) int); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = returnFunc(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockRepository_Stats_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Stats'
+type MockRepository_Stats_Call struct {
+	*mock.Call
+}
+
+// Stats is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockRepository_Expecter) Stats(ctx interface{}) *MockRepository_Stats_Call {
+	return &MockRepository_Stats_Call{Call: _e.mock.On("Stats", ctx)}
+}
+
+func (_c *MockRepository_Stats_Call) Run(run func(ctx context.Context)) *MockRepository_Stats_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_Stats_Call) Return(urls int, users int, err error) *MockRepository_Stats_Call {
+	_c.Call.Return(urls, users, err)
+	return _c
+}
+
+func (_c *MockRepository_Stats_Call) RunAndReturn(run func(ctx context.Context) (int, int, error)) *MockRepository_Stats_Call {
+	_c.Call.Return(run)
+	return _c
+}

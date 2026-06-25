@@ -6,9 +6,12 @@ package service
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 )
+
+var ErrInvalidURL = errors.New("invalid URL")
 
 // ShortenerService генерирует короткие идентификаторы для URL на основе MD5-хэша.
 type ShortenerService struct{}
@@ -22,7 +25,7 @@ func NewURLShortenerService() *ShortenerService {
 // Ошибка возвращается, если URL не начинается с http:// или https://.
 func (s *ShortenerService) Shorten(url string) (string, error) {
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		return "", fmt.Errorf("failed to shorten URL %s: invalid scheme", url)
+		return "", fmt.Errorf("%w: %s", ErrInvalidURL, url)
 	}
 
 	hash := md5.Sum([]byte(url))
