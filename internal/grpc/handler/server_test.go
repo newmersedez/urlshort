@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"testing"
 
@@ -17,7 +18,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // --- моки ---
@@ -64,7 +64,7 @@ func (m *mockTokenService) GetUserID(token string) (uuid.UUID, error) {
 func startTestServer(t *testing.T, repo Repository, shortener ShortenerService, tokens TokenService) pb.ShortenerServiceClient {
 	t.Helper()
 
-	grpcServer := NewShortenerServer("http://localhost:8080", repo, shortener, tokens)
+	grpcServer := NewShortenerServer("http://localhost:8080", repo, shortener, tokens, slog.Default())
 
 	lis, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
@@ -201,7 +201,7 @@ func TestListUserURLs_Success(t *testing.T) {
 
 	client := startTestServer(t, repo, new(mockShortener), tokens)
 
-	resp, err := client.ListUserURLs(ctxWithToken(token), &emptypb.Empty{})
+	resp, err := client.ListUserURLs(ctxWithToken(token), &pb.ListUserURLsRequest{})
 
 	require.NoError(t, err)
 	assert.Len(t, resp.GetUrl(), 2)

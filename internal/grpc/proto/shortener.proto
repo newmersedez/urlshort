@@ -4,12 +4,10 @@ package shortener;
 
 option go_package = "github.com/newmersedez/urlshort/internal/grpc/proto";
 
-import "google/protobuf/empty.proto";
-
 service ShortenerService {
   rpc ShortenURL    (URLShortenRequest)      returns (URLShortenResponse);
   rpc ExpandURL     (URLExpandRequest)       returns (URLExpandResponse);
-  rpc ListUserURLs  (google.protobuf.Empty)  returns (UserURLsResponse);
+  rpc ListUserURLs  (ListUserURLsRequest)    returns (UserURLsResponse);
 }
 
 message URLShortenRequest {
@@ -27,6 +25,8 @@ message URLExpandRequest {
 message URLExpandResponse {
   string result = 1;
 }
+
+message ListUserURLsRequest {}
 
 message UserURLsResponse {
   repeated URLData url = 1;

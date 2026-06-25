@@ -153,9 +153,13 @@ func (r *FileRepository) Stats(ctx context.Context) (urls int, users int, err er
 
 	uniqueUsers := make(map[uuid.UUID]struct{})
 	for _, item := range r.items {
+		if item.Deleted {
+			continue
+		}
+		urls++
 		uniqueUsers[item.UserID] = struct{}{}
 	}
-	return len(r.items), len(uniqueUsers), nil
+	return urls, len(uniqueUsers), nil
 }
 
 // Ping всегда возвращает nil - файловое хранилище всегда доступно.

@@ -3,19 +3,21 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 
 	"github.com/google/uuid"
 	pb "github.com/newmersedez/urlshort/internal/grpc/proto"
 	"github.com/newmersedez/urlshort/internal/model"
+	"github.com/newmersedez/urlshort/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Repository — интерфейс хранилища (тот же, что и у HTTP-сервера).
@@ -44,6 +46,7 @@ type ShortenerServer struct {
 	store            Repository
 	shortenerService ShortenerService
 	tokenService     TokenService
+	logger           *slog.Logger
 }
 
 // NewShortenerServer создаёт и возвращает настроенный gRPC-сервер.
@@ -53,12 +56,14 @@ func NewShortenerServer(
 	store Repository,
 	shortenerService ShortenerService,
 	tokenService TokenService,
+	logger *slog.Logger,
 ) *grpc.Server {
 	server := &ShortenerServer{
 		baseURL:          strings.TrimRight(baseURL, "/") + "/",
 		store:            store,
 		shortenerService: shortenerService,
 		tokenService:     tokenService,
+		logger:           logger,
 	}
 
 	s := grpc.NewServer(grpc.UnaryInterceptor(server.authInterceptor))
@@ -135,12 +140,17 @@ func (s *ShortenerServer) ShortenURL(ctx context.Context, req *pb.URLShortenRequ
 
 	id, err := s.shortenerService.Shorten(req.GetUrl())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid url: %v", err)
+		if errors.Is(err, service.ErrInvalidURL) {
+			return nil, status.Error(codes.InvalidArgument, "invalid url")
+		}
+		s.logger.Error("shortener service error", "error", err)
+		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
 	shortenURL := model.NewShortenURL(userID, id, req.GetUrl())
 	if err := s.store.Add(ctx, shortenURL); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to save url: %v", err)
+		s.logger.Error("failed to save url", "error", err)
+		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
 	var resp pb.URLShortenResponse
@@ -156,7 +166,8 @@ func (s *ShortenerServer) ExpandURL(ctx context.Context, req *pb.URLExpandReques
 
 	url, err := s.store.Get(ctx, req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get url: %v", err)
+		s.logger.Error("failed to get url", "id", req.GetId(), "error", err)
+		return nil, status.Error(codes.Internal, "internal server error")
 	}
 	if url == nil {
 		return nil, status.Errorf(codes.NotFound, "url with id %q not found", req.GetId())
@@ -171,7 +182,7 @@ func (s *ShortenerServer) ExpandURL(ctx context.Context, req *pb.URLExpandReques
 }
 
 // ListUserURLs реализует GET /api/user/urls через gRPC.
-func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*pb.UserURLsResponse, error) {
+func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *pb.ListUserURLsRequest) (*pb.UserURLsResponse, error) {
 	userID, ok := getUserID(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "unauthorized")
@@ -179,7 +190,8 @@ func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*
 
 	urls, err := s.store.GetList(ctx, userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get urls: %v", err)
+		s.logger.Error("failed to get user urls", "userID", userID, "error", err)
+		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
 	urlData := make([]*pb.URLData, 0, len(urls))

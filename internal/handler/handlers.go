@@ -206,7 +206,11 @@ func newRouter(handler *handlers) *chi.Mux {
 	router.Use(middleware.RequestCompressorMiddleware(handler.logger))
 	router.Use(middleware.AuthorizationMiddleware(handler.tokenService, handler.logger))
 
-	router.Get("/api/internal/stats", handler.getStatsHandle)
+	router.Group(func(r chi.Router) {
+		r.Use(middleware.TrustedSubnetMiddleware(handler.trustedSubnet))
+		r.Get("/api/internal/stats", handler.getStatsHandle)
+	})
+
 	router.Get("/api/user/urls", handler.GetURLsHandle)
 	router.Get("/{id}", handler.getOriginURLHandle)
 	router.Get("/ping", handler.pingDatabaseHandle)
@@ -542,20 +546,7 @@ func (h *handlers) deleteURLsHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 // getStatsHandle обрабатывает GET /api/internal/stats.
-// Доступен только клиентам из доверенной подсети (X-Real-IP).
 func (h *handlers) getStatsHandle(w http.ResponseWriter, r *http.Request) {
-	if h.trustedSubnet == nil {
-		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return
-	}
-
-	ipStr := r.Header.Get("X-Real-IP")
-	ip := net.ParseIP(ipStr)
-	if ip == nil || !h.trustedSubnet.Contains(ip) {
-		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return
-	}
-
 	urls, users, err := h.store.Stats(r.Context())
 	if err != nil {
 		h.logger.Error("failed to get stats", "error", err)

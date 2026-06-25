@@ -128,9 +128,13 @@ func (r *MemoryRepository) Stats(ctx context.Context) (urls int, users int, err 
 
 	uniqueUsers := make(map[uuid.UUID]struct{})
 	for _, item := range r.items {
+		if item.Deleted {
+			continue
+		}
+		urls++
 		uniqueUsers[item.UserID] = struct{}{}
 	}
-	return len(r.items), len(uniqueUsers), nil
+	return urls, len(uniqueUsers), nil
 }
 
 // Ping всегда возвращает nil - in-memory хранилище всегда доступно.

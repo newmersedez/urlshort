@@ -13,8 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/newmersedez/urlshort/internal/config"
-	"github.com/newmersedez/urlshort/internal/handler"
 	grpchandler "github.com/newmersedez/urlshort/internal/grpc/handler"
+	"github.com/newmersedez/urlshort/internal/handler"
 	"github.com/newmersedez/urlshort/internal/logger"
 	"github.com/newmersedez/urlshort/internal/repository"
 	"github.com/newmersedez/urlshort/internal/service"
@@ -132,7 +132,7 @@ func run() (err error) {
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
-	grpcServer := grpchandler.NewShortenerServer(cfg.BaseURL, repo, shortenerService, tokenService)
+	grpcServer := grpchandler.NewShortenerServer(cfg.BaseURL, repo, shortenerService, tokenService, appLog)
 
 	g.Go(func() error {
 		appLog.Info("Starting gRPC server", "address", cfg.GRPCAddr)
